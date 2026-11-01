@@ -387,3 +387,49 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
   .rate-panel:first-child { grid-column: 1; }
   .rate-panel:nth-child(3) { grid-column: 1 / -1; }
 }
+
+/* ==========================================================================
+   Страница отчёта (/report, /r/{token})
+   ========================================================================== */
+.report-head { display: flex; flex-wrap: wrap; gap: 14px; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.report-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.report-grid { display: grid; gap: 16px; margin-bottom: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+.report-grid .card { margin-bottom: 0; }
+.center { text-align: center; }
+.chart-wrap { position: relative; height: 260px; }
+.share-box { margin-top: 16px; }
+.share-row { display: flex; gap: 8px; margin-top: 6px; }
+.share-row input {
+  flex: 1; min-width: 0; padding: 8px 10px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--fg); font-size: .82rem;
+}
+.btn-sm { padding: 6px 12px; font-size: .84rem; }
+.table-wrap { overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.data-table th, .data-table td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+.data-table th { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--fg-muted); }
+.data-table tbody tr:hover { background: var(--surface-2); }
+.recommendations { display: grid; gap: 12px; }
+.rec-card { border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius-sm); padding: 14px; }
+.rec-card.is-high { border-left-color: var(--danger); }
+.rec-card.is-medium { border-left-color: var(--warn); }
+.rec-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; }
+.rec-head h3 { font-size: .98rem; margin: 0; }
+.rec-actions { margin: 8px 0 0 18px; padding: 0; color: var(--fg-muted); font-size: .88rem; }
+.rec-actions li { margin-bottom: 3px; }
+.rec-source { margin: 8px 0 0; }
+.badge { font-size: .7rem; padding: 3px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.badge-high { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+.badge-medium { background: color-mix(in srgb, var(--warn) 20%, transparent); color: var(--warn); }
+.badge-low { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.empty-state { text-align: center; padding: 60px 20px; }
+.skeleton { background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: var(--radius-sm); }
+.skeleton-title { height: 34px; width: 40%; margin-bottom: 18px; }
+.skeleton-block { height: 160px; margin-bottom: 14px; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+@media (min-width: 860px) {
+  .report-grid { grid-template-columns: 1fr 1fr; }
+  .report-grid .card:nth-child(1) { grid-row: span 2; }
+}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Отчёт — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <div class="report-loading" data-report-loading>
+      <div class="skeleton skeleton-title"></div>
+      <div class="skeleton skeleton-block"></div>
+      <div class="skeleton skeleton-block"></div>
+    </div>
+
+    <div data-report-root hidden>
+      <header class="report-head reveal">
+        <div>
+          <h1>Отчёт об оценке</h1>
+          <p class="muted" data-report-meta></p>
+        </div>
+        <div class="report-actions">
+          <button class="btn btn-ghost" type="button" data-toggle-share>
+            Публичная ссылка
+          </button>
+          <a class="btn btn-ghost" data-export-html href="#" target="_blank" rel="noopener">HTML</a>
+          <a class="btn btn-primary" data-export-pdf href="#">Скачать PDF</a>
+        </div>
+      </header>
+
+      <div class="report-grid">
+        <article class="card reveal">
+          <h2 class="panel-title">Общий балл</h2>
+          <div class="overall-ring" data-overall-ring>
+            <span class="overall-value" data-overall-value>0.0</span>
+            <span class="overall-label">из 10</span>
+          </div>
+          <p class="muted center" data-harmony></p>
+          <div class="share-box" data-share-box hidden>
+            <label class="small muted">Публичная ссылка</label>
+            <div class="share-row">
+              <input type="text" readonly data-share-url>
+              <button class="btn btn-ghost btn-sm" type="button" data-copy-share>Копировать</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="card reveal">
+          <h2 class="panel-title">Категории</h2>
+          <div class="chart-wrap"><canvas data-category-chart height="240"></canvas></div>
+        </article>
+
+        <article class="card reveal">
+          <h2 class="panel-title">Профиль метрик</h2>
+          <div class="chart-wrap"><canvas data-radar-chart height="300"></canvas></div>
+        </article>
+
+        <article class="card reveal">
+          <h2 class="panel-title">Сильные стороны</h2>
+          <ul class="metric-list" data-strengths></ul>
+          <h2 class="panel-title">Зоны роста</h2>
+          <ul class="metric-list" data-growth></ul>
+        </article>
+      </div>
+
+      <article class="card reveal">
+        <h2 class="panel-title">Все метрики</h2>
+        <div class="table-wrap">
+          <table class="data-table" data-metrics-table>
+            <thead>
+              <tr><th>Метрика</th><th>Категория</th><th>Значение</th><th>Эталон</th><th>Балл</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card reveal">
+        <h2 class="panel-title">Рекомендации</h2>
+        <div class="recommendations" data-recommendations></div>
+      </article>
+
+      <p class="disclaimer muted small" data-disclaimer></p>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/vendor/chart.umd.min.js" defer></script>
+<script src="/static/js/report.js" defer></script>
+{% endblock %}

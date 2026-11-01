@@ -133,3 +133,19 @@ async def rate_page(request: Request, user: OptionalUser) -> Response:
     if user is None:
         return RedirectResponse("/login?next=/rate", status_code=302)
     return templates.TemplateResponse(request, "rate.html", _base_context(request, user))
+
+
+@router.get("/report", response_class=HTMLResponse)
+async def report_page(request: Request, user: OptionalUser) -> Response:
+    """Страница отчёта. Гостя отправляем на вход."""
+    if user is None:
+        return RedirectResponse("/login?next=/report", status_code=302)
+    return templates.TemplateResponse(request, "report.html", _base_context(request, user))
+
+
+@router.get("/r/{token}", response_class=HTMLResponse)
+async def public_report_page(request: Request, token: str, user: OptionalUser) -> Response:
+    """Публичная страница отчёта по анонимному токену."""
+    context = _base_context(request, user)
+    context["public_token"] = token
+    return templates.TemplateResponse(request, "report.html", context)

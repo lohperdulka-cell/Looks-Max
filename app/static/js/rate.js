@@ -22,6 +22,7 @@
   const canvasHint = $('[data-canvas-hint]');
   const runBtn = $('[data-run-preview]');
   const resetBtn = $('[data-reset-points]');
+  const reportBtn = $('[data-create-report]');
   const previewEmpty = $('[data-preview-empty]');
   const previewContent = $('[data-preview-content]');
 
@@ -124,6 +125,7 @@
       renderQuality(data.warnings || []);
       runBtn.disabled = state.points.length === 0;
       resetBtn.disabled = state.points.length === 0;
+      if (reportBtn) reportBtn.disabled = state.points.length === 0;
       toast('Фото обработано. Точки можно поправить.', 'success');
       resetPreview();
     } catch (err) {
@@ -357,6 +359,28 @@
     }
   });
 
+  if (reportBtn) {
+    reportBtn.addEventListener('click', async () => {
+      if (!state.photo) return;
+      reportBtn.setAttribute('aria-busy', 'true');
+      reportBtn.disabled = true;
+      try {
+        if (state.dirty) await savePoints();
+        const csrf = window.fm.getCookie('fm_csrf');
+        const report = await api(`/api/reports?photo_id=${state.photo.id}`, {
+          method: 'POST',
+          headers: csrf ? { 'X-CSRF-Token': csrf } : {},
+        });
+        toast('Отчёт сохранён', 'success');
+        window.location.href = `/report?id=${report.id}`;
+      } catch (err) {
+        toast(err.message || 'Не удалось создать отчёт', 'error');
+        reportBtn.removeAttribute('aria-busy');
+        reportBtn.disabled = false;
+      }
+    });
+  }
+
   resetBtn.addEventListener('click', () => {
     state.points = state.originalPoints.map((p) => ({ ...p }));
     state.dirty = true;
@@ -377,6 +401,7 @@
       renderQuality([]);
       runBtn.disabled = state.points.length === 0;
       resetBtn.disabled = state.points.length === 0;
+      if (reportBtn) reportBtn.disabled = state.points.length === 0;
     } catch { /* гость или пусто — ничего не делаем */ }
   })();
 })();
