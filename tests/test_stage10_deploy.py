@@ -278,3 +278,75 @@ def test_demo_report_metrics_close_to_reference():
     assert 3.0 <= result.overall <= 8.0
     assert result.categories["symmetry"] >= 7.0
     assert raw.values["facial_thirds"] > 0.5  # без точки лба было ровно 0.0
+
+
+# --- Выравнивание по глазам -------------------------------------------------
+
+
+def test_eye_centers_scheme_detected_by_point_count():
+    """Демо-провайдер (106 точек) должен давать центры глаз, а не pts[0]/pts[-1]."""
+
+    from app.ml.landmarks import FaceLandmarks
+    from app.ml.preprocessing import _eye_centers
+
+    lm = FaceLandmarks(points=synthetic_points(_bgr()), provider="demo")
+    left, right = _eye_centers(lm)
+
+    assert left[0] < right[0]  # всегда слева направо по изображению
+    assert 0.3 < left[1] < 0.45  # уровень глаз, а не верх/низ кадра
+    assert 0.3 < right[1] < 0.45
+
+
+def test_eye_centers_normalize_order_for_any_scheme():
+    """Порядок глаз нормализуется: иначе выравнивание разворачивает лицо."""
+
+    from app.ml.landmarks import FaceLandmarks
+    from app.ml.preprocessing import _eye_centers
+
+    lm = FaceLandmarks(points=synthetic_points(_bgr()), provider="demo")
+    _left, right = _eye_centers(lm)
+
+    # Зеркалим изображение по x: центры должны поменяться местами, но порядок
+    # «слева направо» сохраниться.
+    flipped = lm.points.copy()
+    flipped[:, 0] = 1.0 - flipped[:, 0]
+    left2, right2 = _eye_centers(FaceLandmarks(points=flipped, provider="demo"))
+
+    assert left2[0] < right2[0]
+    assert left2[0] == pytest.approx(1.0 - right[0], abs=1e-9)
+
+
+def _force_demo(monkeypatch) -> None:
+    """Включает демо-провайдер: preprocess заново вызывает extract_landmarks."""
+    monkeypatch.setattr(lm_module.settings, "ml_enabled", True)
+    monkeypatch.setattr(lm_module.settings, "ml_provider_primary", "demo")
+    monkeypatch.setattr(lm_module.settings, "ml_provider_fallback", "demo")
+    monkeypatch.setattr(lm_module.settings, "ml_provider_demo", True)
+
+
+def test_align_by_eyes_keeps_face_upright(monkeypatch):
+    """Горизонтальная линия глаз не должна давать разворот на ~180°."""
+    _force_demo(monkeypatch)
+
+    from app.ml.landmarks import FaceLandmarks
+    from app.ml.preprocessing import align_by_eyes, preprocess
+
+    image = _bgr(size=(640, 640))
+    lm = FaceLandmarks(points=synthetic_points(image), provider="demo")
+    _, angle = align_by_eyes(image, lm)
+    assert abs(angle) < 5.0
+
+    result = preprocess(image, auto_align=True)
+    assert abs(result.eye_angle_deg) < 5.0
+
+
+def test_preprocess_preserves_demo_symmetry(monkeypatch):
+    """Выравнивание и кроп не должны ломать симметрию синтетической сетки."""
+    _force_demo(monkeypatch)
+
+    from app.ml.metrics import compute_raw_metrics
+    from app.ml.preprocessing import preprocess
+
+    result = preprocess(_bgr(size=(640, 640)), auto_align=True)
+    raw = compute_raw_metrics(result.landmarks)
+    assert raw.values["facial_symmetry"] < 0.005

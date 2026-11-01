@@ -41,22 +41,38 @@ def decode_image(data: bytes) -> np.ndarray:
 def _eye_centers(lm: FaceLandmarks) -> tuple[np.ndarray, np.ndarray]:
     """Возвращает центры левого и правого глаза (в пикселях нормированной системы).
 
-    Для InsightFace (106 точек) берём средние точки уголков глаз по индексам;
-    для MediaPipe (468) — стандартные центры зрачков (468/473 при refine).
+    Схема определяется числом точек, а не провайдером: демо-провайдер отдаёт те
+    же 106 точек, что и InsightFace, а отредактированные вручную точки сохраняют
+    исходную плотность. Выбор по имени провайдера отправлял демо-точки в
+    fallback `pts[0] / pts[-1]` и поворачивал лицо на ~113°.
+
+    Порядок всегда «слева направо по изображению»: при поднятой голове линия
+    глаз почти горизонтальна, поэтому угол наклона обязан быть малым. Схемы
+    нумеруют левый и правый глаз по-разному, и без нормализации порядка
+    получался разворот на ~180°.
     """
     pts = lm.points
-    if lm.provider == "insightface" and len(pts) >= 106:
-        left = (pts[35] + pts[33]) / 2.0
-        right = (pts[89] + pts[87]) / 2.0
-        return left, right
-    if len(pts) >= 474:
-        return pts[468], pts[473]
-    if len(pts) >= 168:
-        # Fallback: усредняем характерные точки глаз FaceMesh.
-        left_idx = [33, 133, 159, 145]
-        right_idx = [362, 263, 386, 374]
-        return pts[left_idx].mean(axis=0), pts[right_idx].mean(axis=0)
-    return pts[0], pts[-1]
+    n = len(pts)
+    if 106 <= n < 468:
+        pair = ((pts[35] + pts[33]) / 2.0, (pts[89] + pts[87]) / 2.0)
+    elif n >= 474:
+        pair = (pts[468], pts[473])
+    elif n >= 168:
+        # FaceMesh без зрачков: усредняем характерные точки глаз.
+        pair = (
+            pts[[33, 133, 159, 145]].mean(axis=0),
+            pts[[362, 263, 386, 374]].mean(axis=0),
+        )
+    elif n >= 48:
+        # dlib 68: 36..41 — правый глаз, 42..47 — левый (в терминах субъекта).
+        pair = (pts[36:42].mean(axis=0), pts[42:48].mean(axis=0))
+    else:
+        pair = (pts[0], pts[-1])
+
+    left, right = pair
+    if left[0] > right[0]:
+        left, right = right, left
+    return left, right
 
 
 def align_by_eyes(image_bgr: np.ndarray, lm: FaceLandmarks) -> tuple[np.ndarray, float]:
