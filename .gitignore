@@ -1,0 +1,37 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# --- Тесты / кэш ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Данные и медиа ---
+data/
+!data/.gitkeep
+*.db
+*.sqlite3
+
+# --- Секреты ---
+.env
+.env.*
+!.env.example
+
+# --- ML-модели (веса не в git) ---
+data/models/
+
+# --- Редакторы / ОС ---
+.idea/
+.vscode/
+.DS_Store
+*.log
