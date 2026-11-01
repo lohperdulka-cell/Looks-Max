@@ -115,7 +115,10 @@ Pallett, Little, Perrett и др.). Веса можно переопределя
 - [x] **Этап 1.** Архитектура, структура, pyproject, config, модели БД, Alembic, README.
 - [x] **Этап 2.** Аутентификация (JWT access/refresh + argon2, httpOnly cookies, CSRF),
       лендинг, вход/регистрация/сброс пароля, тёмная/светлая тема, тосты, онбординг-тур.
-- [ ] Этап 3. Загрузка фото → preprocessing → landmarks → canvas drag&drop.
+- [x] **Этап 3.** Загрузка фото (magic-bytes + изоляция), preprocessing
+      (выравнивание по глазам, кроп, оценка качества), landmarks
+      (InsightFace 106 + MediaPipe FaceLandmarker 478 как fallback),
+      canvas-редактор точек с drag&drop и мгновенный предпросмотр метрик.
 - [ ] Этап 4. Метрики + агрегация + отчёт (JSON/HTML/Chart.js/PDF).
 - [ ] Этап 5. Профиль, история, прогресс, до/после, достижения, streak, публичная ссылка.
 - [ ] Этап 6. Мобатлы (ELO, лидерборд, батл недели, анти-чит).

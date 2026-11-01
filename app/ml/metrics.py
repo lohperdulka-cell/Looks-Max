@@ -78,31 +78,49 @@ MP_ZYGOMATIC_LEFT, MP_ZYGOMATIC_RIGHT = 234, 454
 
 
 def _index_map(lm: FaceLandmarks) -> dict[str, int | tuple[int, int]]:
-    """Возвращает карту ключевых точек под конкретный провайдер."""
-    if lm.provider == "insightface" and len(lm.points) >= 106:
-        return {
-            "left_eye_inner": 35,
-            "left_eye_outer": 33,
-            "right_eye_inner": 89,
-            "right_eye_outer": 87,
-            "left_brow_inner": 43,
-            "left_brow_outer": 46,
-            "right_brow_inner": 97,
-            "right_brow_outer": 100,
-            "nose_tip": 86,
-            "nose_left": 74,
-            "nose_right": 98,
-            "mouth_left": 60,
-            "mouth_right": 105,
-            "upper_lip": 62,
-            "lower_lip": 66,
-            "chin": 16,
-            "forehead_top": 27,
-            "jaw_left": 1,
-            "jaw_right": 15,
-            "zygo_left": 2,
-            "zygo_right": 14,
-        }
+    """Возвращает карту ключевых точек под конкретную схему landmarks.
+
+    Схема определяется числом точек, а не только провайдером: вручную
+    отредактированные (provider="manual") точки сохраняют исходную плотность,
+    поэтому опираться на провайдер недостаточно.
+    """
+    n = len(lm.points)
+    if n >= 468:
+        return _mediapipe_index_map()
+    if n >= 106:
+        return _insightface_index_map()
+    return _legacy_index_map()
+
+
+def _insightface_index_map() -> dict[str, int | tuple[int, int]]:
+    """Карта точек для InsightFace 2d106det (106 точек)."""
+    return {
+        "left_eye_inner": 35,
+        "left_eye_outer": 33,
+        "right_eye_inner": 89,
+        "right_eye_outer": 87,
+        "left_brow_inner": 43,
+        "left_brow_outer": 46,
+        "right_brow_inner": 97,
+        "right_brow_outer": 100,
+        "nose_tip": 86,
+        "nose_left": 74,
+        "nose_right": 98,
+        "mouth_left": 60,
+        "mouth_right": 105,
+        "upper_lip": 62,
+        "lower_lip": 66,
+        "chin": 16,
+        "forehead_top": 27,
+        "jaw_left": 1,
+        "jaw_right": 15,
+        "zygo_left": 2,
+        "zygo_right": 14,
+    }
+
+
+def _mediapipe_index_map() -> dict[str, int | tuple[int, int]]:
+    """Карта точек для MediaPipe FaceMesh (468/478 точек)."""
     return {
         "left_eye_inner": MP_LEFT_EYE_INNER,
         "left_eye_outer": MP_LEFT_EYE_OUTER,
@@ -125,6 +143,38 @@ def _index_map(lm: FaceLandmarks) -> dict[str, int | tuple[int, int]]:
         "jaw_right": MP_JAW_RIGHT,
         "zygo_left": MP_ZYGOMATIC_LEFT,
         "zygo_right": MP_ZYGOMATIC_RIGHT,
+    }
+
+
+def _legacy_index_map() -> dict[str, int | tuple[int, int]]:
+    """Карта для 68-точечной схемы (dlib-подобной).
+
+    У 68-точечной схемы нет точки лба, поэтому forehead_top приближён
+    переносицей (nasion, индекс 27). Ветка используется только как последний
+    резерв, когда провайдер вернул нестандартное число точек.
+    """
+    return {
+        "left_eye_inner": 39,
+        "left_eye_outer": 36,
+        "right_eye_inner": 42,
+        "right_eye_outer": 45,
+        "left_brow_inner": 21,
+        "left_brow_outer": 17,
+        "right_brow_inner": 22,
+        "right_brow_outer": 26,
+        "nose_tip": 30,
+        "nose_left": 31,
+        "nose_right": 35,
+        "mouth_left": 48,
+        "mouth_right": 54,
+        "upper_lip": 51,
+        "lower_lip": 57,
+        "chin": 8,
+        "forehead_top": 27,
+        "jaw_left": 0,
+        "jaw_right": 16,
+        "zygo_left": 1,
+        "zygo_right": 15,
     }
 
 

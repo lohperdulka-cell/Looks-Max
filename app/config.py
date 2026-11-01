@@ -68,6 +68,12 @@ class Settings(BaseSettings):
     ml_provider_fallback: str = "mediapipe"
     ml_model_dir: Path = BASE_DIR / "data" / "models"
     ml_lazy_load: bool = True
+    # MediaPipe 0.10+/1.x использует Tasks API и требует .task-модель.
+    ml_mediapipe_allow_download: bool = True
+    ml_mediapipe_model_url: str = (
+        "https://storage.googleapis.com/mediapipe-models/face_landmarker/"
+        "face_landmarker/float16/1/face_landmarker.task"
+    )
 
     # --- LLM (ИИ-консультант) ---
     llm_enabled: bool = False

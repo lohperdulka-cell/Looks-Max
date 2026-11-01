@@ -315,3 +315,75 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
   .primary-nav a { padding: 11px 8px; }
   .theme-toggle { margin-left: 8px; }
 }
+
+/* ==========================================================================
+   Страница оценки (/rate)
+   ========================================================================== */
+.page-head { max-width: 760px; margin-bottom: 26px; }
+
+.rate-grid { display: grid; gap: 18px; }
+.rate-panel {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+}
+.panel-title { font-size: 1.05rem; margin-bottom: 14px; }
+
+.dropzone {
+  border: 2px dashed var(--border); border-radius: var(--radius);
+  padding: 30px 20px; text-align: center; cursor: pointer;
+  transition: border-color .18s, background .18s;
+}
+.dropzone:hover, .dropzone:focus-visible, .dropzone.is-dragover {
+  border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, transparent);
+  outline: none;
+}
+.dropzone-icon { width: 42px; height: 42px; color: var(--accent); margin-bottom: 8px; }
+.dropzone-text { margin: 0 0 4px; }
+
+.quality-report { margin-top: 16px; padding: 14px; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+.quality-report.is-ok { border-color: var(--ok); }
+.quality-report.is-warn { border-color: var(--warn); }
+.quality-report.is-bad { border-color: var(--danger); }
+.quality-head { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: .92rem; }
+.quality-warnings { margin: 10px 0 0; padding-left: 18px; color: var(--fg-muted); font-size: .87rem; }
+
+.rate-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+
+.canvas-wrap { position: relative; }
+.canvas-wrap canvas {
+  width: 100%; height: auto; border-radius: var(--radius-sm);
+  background: var(--surface-2); display: block; touch-action: none; cursor: default;
+}
+.canvas-hint {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 20px;
+}
+
+.preview-empty { padding: 24px 0; text-align: center; }
+.overall-ring {
+  width: 132px; height: 132px; margin: 0 auto 18px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: conic-gradient(var(--accent) 0 65%, var(--surface-2) 65% 100%);
+  position: relative;
+}
+.overall-ring::before {
+  content: ""; position: absolute; inset: 9px; border-radius: 50%; background: var(--surface);
+}
+.overall-value { position: relative; font-size: 2.1rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.overall-label { position: relative; font-size: .72rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .07em; }
+
+.category-bars { display: grid; gap: 9px; margin-bottom: 18px; }
+.category-bar { display: grid; grid-template-columns: 108px 1fr 42px; gap: 10px; align-items: center; font-size: .87rem; }
+.category-name { color: var(--fg-muted); }
+.category-value { text-align: right; font-variant-numeric: tabular-nums; }
+
+.metric-list { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 12px; }
+.metric-item-head { display: flex; justify-content: space-between; font-size: .9rem; margin-bottom: 5px; }
+.metric-item-score { color: var(--accent); font-variant-numeric: tabular-nums; font-weight: 600; }
+.metric-item-note { font-size: .82rem; color: var(--fg-muted); margin: 6px 0 0; }
+
+@media (min-width: 900px) {
+  .rate-grid { grid-template-columns: 1fr 1fr; align-items: start; }
+  .rate-panel:first-child { grid-column: 1; }
+  .rate-panel:nth-child(3) { grid-column: 1 / -1; }
+}

@@ -125,3 +125,11 @@ async def register_page(request: Request, user: OptionalUser) -> Response:
 async def reset_password_page(request: Request, user: OptionalUser) -> HTMLResponse:
     """Страница запроса восстановления пароля."""
     return templates.TemplateResponse(request, "reset_password.html", _base_context(request, user))
+
+
+@router.get("/rate", response_class=HTMLResponse)
+async def rate_page(request: Request, user: OptionalUser) -> Response:
+    """Страница оценки: загрузка фото и редактор точек. Требует входа."""
+    if user is None:
+        return RedirectResponse("/login?next=/rate", status_code=302)
+    return templates.TemplateResponse(request, "rate.html", _base_context(request, user))

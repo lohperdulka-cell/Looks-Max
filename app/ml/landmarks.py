@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -97,8 +98,44 @@ def _load_insightface() -> Any | None:
         return _insightface_app
 
 
+def _mediapipe_task_model_path() -> Path:
+    """Путь к .task-модели FaceLandmarker для MediaPipe Tasks API."""
+    return settings.ml_model_dir / "face_landmarker.task"
+
+
+def _ensure_mediapipe_task_model() -> Path | None:
+    """Гарантирует наличие .task-модели, скачивая её при необходимости.
+
+    MediaPipe 0.10+ (в т.ч. 1.x) удалил `mp.solutions`, оставив Tasks API,
+    которому нужен файл модели. Кэшируем его в ml_model_dir.
+    """
+    path = _mediapipe_task_model_path()
+    if path.exists():
+        return path
+    if not settings.ml_mediapipe_allow_download:
+        return None
+    try:
+        import urllib.request
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".task.tmp")
+        with urllib.request.urlopen(settings.ml_mediapipe_model_url, timeout=60) as resp:
+            tmp.write_bytes(resp.read())
+        tmp.replace(path)
+        logger.info("ml.mediapipe.model_downloaded", path=str(path))
+        return path
+    except Exception as exc:
+        logger.warning("ml.mediapipe.model_download_failed", error=str(exc))
+        return None
+
+
 def _load_mediapipe() -> Any | None:
-    """Ленивая загрузка MediaPipe FaceMesh."""
+    """Ленивая загрузка MediaPipe FaceMesh.
+
+    Поддерживает оба API: старый `mp.solutions.face_mesh` (<= 0.10.x) и новый
+    Tasks API `mp.tasks.vision.FaceLandmarker` (0.10+/1.x), где `solutions`
+    отсутствует. Возвращает объект-обёртку с единым интерфейсом `detect(rgb)`.
+    """
     global _mediapipe_mesh, _mediapipe_failed
     if _mediapipe_mesh is not None or _mediapipe_failed:
         return _mediapipe_mesh
@@ -108,13 +145,34 @@ def _load_mediapipe() -> Any | None:
         try:
             import mediapipe as mp
 
-            _mediapipe_mesh = mp.solutions.face_mesh.FaceMesh(
-                static_image_mode=True,
-                max_num_faces=1,
-                refine_landmarks=True,
-                min_detection_confidence=0.5,
+            solutions = getattr(mp, "solutions", None)
+            if solutions is not None:
+                _mediapipe_mesh = solutions.face_mesh.FaceMesh(
+                    static_image_mode=True,
+                    max_num_faces=1,
+                    refine_landmarks=True,
+                    min_detection_confidence=0.5,
+                )
+                logger.info("ml.mediapipe.loaded", api="solutions")
+                return _mediapipe_mesh
+
+            model_path = _ensure_mediapipe_task_model()
+            if model_path is None:
+                raise RuntimeError("нет .task-модели для MediaPipe Tasks API")
+
+            from mediapipe.tasks import python as mp_python
+            from mediapipe.tasks.python import vision as mp_vision
+
+            options = mp_vision.FaceLandmarkerOptions(
+                base_options=mp_python.BaseOptions(model_asset_path=str(model_path)),
+                running_mode=mp_vision.RunningMode.IMAGE,
+                num_faces=1,
+                min_face_detection_confidence=0.5,
             )
-            logger.info("ml.mediapipe.loaded")
+            _mediapipe_mesh = _MediaPipeTaskWrapper(
+                mp_vision.FaceLandmarker.create_from_options(options), mp
+            )
+            logger.info("ml.mediapipe.loaded", api="tasks")
         except Exception as exc:
             _mediapipe_failed = True
             logger.warning("ml.mediapipe.unavailable", error=str(exc))
@@ -153,6 +211,44 @@ def _extract_with_insightface(image_bgr: np.ndarray) -> FaceLandmarks | None:
         age=float(face.age) if getattr(face, "age", None) is not None else None,
         bbox=(x1 / w, y1 / h, x2 / w, y2 / h),
     )
+
+
+class _MediaPipeTaskWrapper:
+    """Единый интерфейс для `mp.tasks.vision.FaceLandmarker`.
+
+    Приводит результат Tasks API к тому же виду, что и старый FaceMesh.process:
+    объект с атрибутом `multi_face_landmarks` (список объектов с `.landmark`).
+    """
+
+    def __init__(self, landmarker: Any, mp_module: Any) -> None:
+        self._landmarker = landmarker
+        self._mp = mp_module
+
+    def process(self, rgb: np.ndarray) -> Any:
+        mp_image = self._mp.Image(image_format=self._mp.ImageFormat.SRGB, data=rgb)
+        result = self._landmarker.detect(mp_image)
+
+        class _Point:
+            __slots__ = ("x", "y")
+
+            def __init__(self, x: float, y: float) -> None:
+                self.x = x
+                self.y = y
+
+        class _Face:
+            __slots__ = ("landmark",)
+
+            def __init__(self, points: list) -> None:
+                self.landmark = points
+
+        class _Result:
+            __slots__ = ("multi_face_landmarks",)
+
+            def __init__(self, faces: list) -> None:
+                self.multi_face_landmarks = faces
+
+        faces = [_Face([_Point(p.x, p.y) for p in face]) for face in (result.face_landmarks or [])]
+        return _Result(faces)
 
 
 def _extract_with_mediapipe(image_bgr: np.ndarray) -> FaceLandmarks | None:

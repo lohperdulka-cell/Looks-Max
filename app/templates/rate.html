@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Оценка по фото — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <header class="page-head reveal">
+      <h1>Оценка по фото</h1>
+      <p class="muted">
+        Загрузите анфас: ровный свет, нейтральное выражение, волосы не закрывают лицо.
+        Мы найдём точки лица, а вы сможете поправить их вручную.
+      </p>
+    </header>
+
+    <div class="rate-grid">
+      <div class="rate-panel reveal">
+        <h2 class="panel-title">1. Фото</h2>
+
+        <div class="dropzone" data-dropzone tabindex="0" role="button"
+             aria-label="Загрузить фото: перетащите файл или нажмите для выбора">
+          <input type="file" accept="image/jpeg,image/png,image/webp" hidden data-file-input>
+          <svg viewBox="0 0 24 24" class="dropzone-icon" aria-hidden="true">
+            <path d="M12 16V4m0 0L7 9m5-5 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+          <p class="dropzone-text"><strong>Перетащите фото</strong> или нажмите, чтобы выбрать</p>
+          <p class="hint">JPEG, PNG или WebP, до 12 МБ. Файл виден только вам.</p>
+        </div>
+
+        <div class="progress" data-upload-progress hidden><i style="width:0%"></i></div>
+        <ul class="progress-steps" data-upload-steps hidden>
+          <li data-step="upload">Загрузка файла</li>
+          <li data-step="detect">Поиск точек лица</li>
+          <li data-step="align">Выравнивание и кроп</li>
+          <li data-step="quality">Оценка качества</li>
+        </ul>
+
+        <div class="quality-report" data-quality hidden></div>
+
+        <div class="rate-actions">
+          <button class="btn btn-primary" type="button" data-run-preview disabled>
+            Рассчитать метрики
+          </button>
+          <button class="btn btn-ghost" type="button" data-reset-points disabled>
+            Сбросить точки
+          </button>
+        </div>
+      </div>
+
+      <div class="rate-panel reveal">
+        <h2 class="panel-title">2. Точки лица</h2>
+        <div class="canvas-wrap" data-canvas-wrap>
+          <canvas data-canvas width="520" height="620" aria-label="Редактор точек лица"></canvas>
+          <div class="canvas-hint muted small" data-canvas-hint>
+            Загрузите фото — точки появятся здесь. Их можно перетаскивать мышью или пальцем.
+          </div>
+        </div>
+        <p class="hint">
+          Тяните точки, чтобы поправить посадку. Изменения применяются к предпросмотру сразу.
+        </p>
+      </div>
+
+      <div class="rate-panel reveal" data-preview-panel>
+        <h2 class="panel-title">3. Предпросмотр метрик</h2>
+        <div class="preview-empty muted" data-preview-empty>
+          Нажмите «Рассчитать метрики», чтобы увидеть баллы.
+        </div>
+        <div class="preview-content" data-preview-content hidden>
+          <div class="overall-ring" data-overall-ring>
+            <span class="overall-value" data-overall-value>0.0</span>
+            <span class="overall-label">общий балл</span>
+          </div>
+          <div class="category-bars" data-category-bars></div>
+          <h3>Сильные стороны</h3>
+          <ul class="metric-list" data-strengths></ul>
+          <h3>Зоны роста</h3>
+          <ul class="metric-list" data-growth></ul>
+          <p class="disclaimer muted small" data-disclaimer></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/rate.js" defer></script>
+{% endblock %}

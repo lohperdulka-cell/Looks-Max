@@ -134,8 +134,10 @@ def create_app() -> FastAPI:
 
     from app.api.auth import router as auth_router
     from app.api.pages import router as pages_router
+    from app.api.photos import router as photos_router
 
     application.include_router(auth_router)
+    application.include_router(photos_router)
     application.include_router(pages_router)
 
     # Статика (CSS/JS) подключается сразу; шаблоны — по мере этапов.

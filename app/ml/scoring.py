@@ -37,6 +37,9 @@ from app.ml.metrics import RawMetrics
 # Крутизна логистики: при z=1 (граница допуска) даёт ровно 5.0.
 LOGISTIC_K = math.log(9.0)  # 10/(1+exp(k*0)) = 5 при z=1 => exp(k)=9
 
+# Масштаб спада гармонии: при std≈1.8 (типичный разброс метрик) балл ≈ 3.7.
+HARMONY_DECAY = 1.8
+
 
 @dataclass(slots=True)
 class MetricScore:
@@ -178,8 +181,8 @@ def score_metrics(
         mean = sum(scores) / len(scores)
         variance = sum((s - mean) ** 2 for s in scores) / len(scores)
         std = math.sqrt(variance)
-        # std 0 -> 10; std 3 -> ~0. Ограничиваем 0..10.
-        harmony_score = max(0.0, min(10.0, 10.0 * (1.0 - std / 3.0)))
+        # Плавный спад: std=0 -> 10, std=HARMONY_DECAY -> ~3.7, без жёсткого нуля.
+        harmony_score = max(0.0, min(10.0, 10.0 * math.exp(-std / HARMONY_DECAY)))
     else:
         harmony_score = result.overall
 
