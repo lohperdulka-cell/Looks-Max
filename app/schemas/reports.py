@@ -92,6 +92,7 @@ class PublicReportOut(BaseModel):
     harmony_score: float | None = None
     categories_detail: list[CategoryOut] = Field(default_factory=list)
     metrics: list[MetricOut] = Field(default_factory=list)
+    recommendations: list[RecommendationOut] = Field(default_factory=list)
     strengths: list[MetricOut] = Field(default_factory=list)
     growth: list[MetricOut] = Field(default_factory=list)
     disclaimer: str = ""

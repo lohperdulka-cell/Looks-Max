@@ -65,6 +65,15 @@ def _tilt_deg(inner: np.ndarray, outer: np.ndarray) -> float:
     return math.degrees(math.atan2(-dy, dx))
 
 
+def _ramus_point(gonion: np.ndarray) -> np.ndarray:
+    """Точка на ветви челюсти: вверх от угла, чуть внутрь (к уху).
+
+    Ветвь почти вертикальна, поэтому смещение вверх с малым наклоном внутрь
+    даёт устойчивую оценку gonial angle без отдельной landmark-точки.
+    """
+    return np.asarray([gonion[0] + 0.02 * (0.5 - gonion[0]), gonion[1] - 0.12])
+
+
 def _face_width(pts: np.ndarray) -> float:
     return float(pts[:, 0].max() - pts[:, 0].min())
 
@@ -360,10 +369,12 @@ def compute_raw_metrics(lm: FaceLandmarks, gender: str | None = None) -> RawMetr
         lower_third = max(menton_y - subnasale_y, 1e-6)
         out.set("philtrum_ratio", float(philtrum / lower_third))
 
-    # --- Gonial angle: угол при углах челюсти (jaw→gonion→chin).
-    gonial_left = _angle(chin, jaw_left, nose_left)
-    gonial_right = _angle(chin, jaw_right, nose_right)
-    # Используем угол между линией jaw→chin и jaw→(условная вертикаль к скуле).
+    # --- Gonial angle: угол при гонеоне между ветвью и телом челюсти.
+    # Ветвь идёт почти вертикально вверх (к уху), тело — к подбородку.
+    # Раньше вторым лучом служило крыло носа: анатомически это не ветвь,
+    # и угол выходил ~99° вместо 120-130°.
+    gonial_left = _angle(_ramus_point(jaw_left), jaw_left, chin)
+    gonial_right = _angle(_ramus_point(jaw_right), jaw_right, chin)
     out.set("gonial_angle", (gonial_left + gonial_right) / 2.0)
 
     # --- Bigonial width как доля ширины лица.

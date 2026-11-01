@@ -104,18 +104,41 @@ def align_by_eyes(image_bgr: np.ndarray, lm: FaceLandmarks) -> tuple[np.ndarray,
 def crop_face(
     image_bgr: np.ndarray, lm: FaceLandmarks, margin: float = 0.25
 ) -> tuple[np.ndarray, FaceLandmarks]:
-    """Обрезает изображение вокруг bbox лица с полем margin (доля размера bbox)."""
+    """Обрезает изображение вокруг bbox лица с полем margin (доля размера bbox).
+
+    Кроп квадратный: стороны выравниваются по большей стороне bbox. Иначе
+    прямоугольник сжимался бы по осям по-разному, а точки нормировались бы
+    независимо — углы (gonial, canthal tilt) искажались бы. На тестовом лице
+    неравномерный кроп уводил gonial angle с 98.8° на 70.8°.
+    """
     h, w = image_bgr.shape[:2]
     xs, ys = lm.points[:, 0] * w, lm.points[:, 1] * h
     x1, x2 = float(xs.min()), float(xs.max())
     y1, y2 = float(ys.min()), float(ys.max())
     bw, bh = x2 - x1, y2 - y1
 
-    mx, my = bw * margin, bh * margin
-    cx1 = max(0, int(x1 - mx))
-    cy1 = max(0, int(y1 - my))
-    cx2 = min(w, int(x2 + mx))
-    cy2 = min(h, int(y2 + my))
+    # Квадрат со стороной по большей стороне bbox плюс поле.
+    side = max(bw, bh) * (1.0 + 2.0 * margin)
+    ccx, ccy = (x1 + x2) / 2.0, (y1 + y2) / 2.0
+    cx1 = round(ccx - side / 2.0)
+    cy1 = round(ccy - side / 2.0)
+    cx2 = round(ccx + side / 2.0)
+    cy2 = round(ccy + side / 2.0)
+
+    # Сдвигаем квадрат внутрь кадра, сохраняя его размер (масштаб осей равен).
+    if cx1 < 0:
+        cx2 -= cx1
+        cx1 = 0
+    if cy1 < 0:
+        cy2 -= cy1
+        cy1 = 0
+    if cx2 > w:
+        cx1 -= cx2 - w
+        cx2 = w
+    if cy2 > h:
+        cy1 -= cy2 - h
+        cy2 = h
+    cx1, cy1 = max(0, cx1), max(0, cy1)
     if cx2 - cx1 < 10 or cy2 - cy1 < 10:
         return image_bgr, lm
 

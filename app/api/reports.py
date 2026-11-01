@@ -143,6 +143,7 @@ async def get_public_report(token: str, db: DbSession) -> PublicReportOut:
         harmony_score=payload.harmony_score,
         categories_detail=payload.categories_detail,
         metrics=payload.metrics,
+        recommendations=payload.recommendations,
         strengths=payload.strengths,
         growth=payload.growth,
         disclaimer=payload.disclaimer,

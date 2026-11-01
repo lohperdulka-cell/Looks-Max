@@ -350,3 +350,46 @@ def test_preprocess_preserves_demo_symmetry(monkeypatch):
     result = preprocess(_bgr(size=(640, 640)), auto_align=True)
     raw = compute_raw_metrics(result.landmarks)
     assert raw.values["facial_symmetry"] < 0.005
+
+
+# --- Геометрия: кроп и углы -------------------------------------------------
+
+
+def test_crop_face_keeps_angles(monkeypatch):
+    """Кроп не должен искажать углы: оси обязаны масштабироваться одинаково."""
+    _force_demo(monkeypatch)
+
+    from app.ml.demo_landmarks import _BASE
+    from app.ml.landmarks import FaceLandmarks
+    from app.ml.metrics import compute_raw_metrics
+    from app.ml.preprocessing import crop_face
+
+    image = _bgr(size=(800, 800))
+    lm = FaceLandmarks(points=_BASE.copy(), provider="demo")
+    before = compute_raw_metrics(lm)
+
+    cropped, cropped_lm = crop_face(image, lm)
+    after = compute_raw_metrics(cropped_lm)
+
+    assert cropped.shape[0] == cropped.shape[1]  # кроп квадратный
+    for key in ("gonial_angle", "canthal_tilt", "brow_tilt"):
+        assert after.values[key] == pytest.approx(before.values[key], abs=0.5)
+
+
+def test_gonial_angle_uses_ramus_not_nose(monkeypatch):
+    """Gonial angle — угол при гонеоне между ветвью и телом челюсти (~120-130°)."""
+    _force_demo(monkeypatch)
+
+    from app.ml.demo_landmarks import _BASE
+    from app.ml.landmarks import FaceLandmarks
+    from app.ml.metrics import compute_raw_metrics
+
+    raw = compute_raw_metrics(FaceLandmarks(points=_BASE.copy(), provider="demo"))
+    assert 115.0 <= raw.values["gonial_angle"] <= 135.0
+
+
+def test_public_report_includes_recommendations(monkeypatch):
+    """Публичная схема обязана содержать recommendations: JS читает их length."""
+    from app.schemas.reports import PublicReportOut
+
+    assert "recommendations" in PublicReportOut.model_fields
