@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import traceback
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -96,8 +97,25 @@ def create_app() -> FastAPI:
 
     @application.exception_handler(Exception)
     async def unhandled_handler(request: Request, exc: Exception) -> JSONResponse:
-        """Централизованный обработчик: не отдаём внутренности наружу."""
+        """Централизованный обработчик: не отдаём внутренности наружу.
+
+        Ошибка дополнительно сохраняется в error_logs — админка показывает
+        последние сбои. Запись best-effort: её сбой не должен ломать ответ.
+        """
         logger.exception("app.unhandled_error", path=request.url.path, error=str(exc))
+        try:
+            from app.services.admin import log_error
+
+            async with SessionLocal() as session:
+                await log_error(
+                    session,
+                    "error",
+                    str(exc),
+                    path=request.url.path,
+                    traceback_text=traceback.format_exc(),
+                )
+        except Exception:
+            logger.warning("app.error_log_failed", path=request.url.path)
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "Внутренняя ошибка сервера"},
@@ -132,6 +150,7 @@ def create_app() -> FastAPI:
             "version": "0.1.0",
         }
 
+    from app.api.admin import router as admin_router
     from app.api.auth import router as auth_router
     from app.api.battles import router as battles_router
     from app.api.chat import router as chat_router
@@ -149,6 +168,7 @@ def create_app() -> FastAPI:
     application.include_router(battles_router)
     application.include_router(exercises_router)
     application.include_router(chat_router)
+    application.include_router(admin_router)
     application.include_router(public_reports_router)
     application.include_router(pages_router)
 

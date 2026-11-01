@@ -75,6 +75,7 @@
         <a href="/battles">Мобатлы</a>
         <a href="/exercises">Упражнения</a>
         <a href="/chat">ИИ-консультант</a>
+        {% if user and user.is_admin %}<a href="/admin">Админка</a>{% endif %}
       </nav>
       <nav aria-label="Компания">
         <h3>Компания</h3>

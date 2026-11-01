@@ -181,3 +181,13 @@ async def chat_page(request: Request, user: OptionalUser) -> Response:
     if user is None:
         return RedirectResponse("/login?next=/chat", status_code=302)
     return templates.TemplateResponse(request, "chat.html", _base_context(request, user))
+
+
+@router.get("/admin", response_class=HTMLResponse)
+async def admin_page(request: Request, user: OptionalUser) -> Response:
+    """Страница админки (только для администраторов)."""
+    if user is None:
+        return RedirectResponse("/login?next=/admin", status_code=302)
+    if not user.is_admin:
+        return RedirectResponse("/", status_code=302)
+    return templates.TemplateResponse(request, "admin.html", _base_context(request, user))
