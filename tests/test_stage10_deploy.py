@@ -172,6 +172,46 @@ async def test_health_is_ok_without_ml(client, monkeypatch):
     assert resp.json()["database"] is True
 
 
+@pytest.mark.asyncio
+async def test_health_degrades_when_no_detector_loads(client, monkeypatch):
+    """Провайдеры не поднялись и демо выключено — это деградация, не «ok».
+
+    Так выглядит поломка «нет libEGL.so.1»: контейнер жив, но загрузка фото
+    падает. Раньше health всё равно отвечал ok, и сбой находили только по
+    жалобе пользователя.
+    """
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ml_enabled", True)
+    monkeypatch.setattr(settings, "ml_provider_primary", "mediapipe")
+    monkeypatch.setattr(settings, "ml_provider_fallback", "insightface")
+    monkeypatch.setattr(settings, "ml_provider_demo", False)
+    monkeypatch.setattr(lm_module, "_load_mediapipe", lambda: None)
+    monkeypatch.setattr(lm_module, "_load_insightface", lambda: None)
+
+    resp = await client.get("/health")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "degraded"
+    assert body["database"] is True
+    assert body["ml"]["mediapipe"] is False
+
+
+@pytest.mark.asyncio
+async def test_health_stays_ok_when_demo_fallback_available(client, monkeypatch):
+    """Если детекторы не поднялись, но включён демо-резерв, сервис работоспособен."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "ml_enabled", True)
+    monkeypatch.setattr(settings, "ml_provider_primary", "mediapipe")
+    monkeypatch.setattr(settings, "ml_provider_demo", True)
+    monkeypatch.setattr(lm_module, "_load_mediapipe", lambda: None)
+    monkeypatch.setattr(lm_module, "_load_insightface", lambda: None)
+
+    resp = await client.get("/health")
+    assert resp.json()["status"] == "ok"
+
+
 # --- Страницы: демо-плашка и онбординг ---------------------------------------
 
 

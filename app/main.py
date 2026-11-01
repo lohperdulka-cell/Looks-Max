@@ -152,7 +152,20 @@ def create_app() -> FastAPI:
             except Exception as exc:
                 ml_status["error"] = str(exc)
 
-        healthy = db_ok
+        # Детектор считается рабочим, если загрузился основной или резервный.
+        # Если ни один не поднялся и демо выключено, загрузка фото упадёт —
+        # это деградация, а не «ok»: иначе поломка вида «нет libEGL.so.1»
+        # проходит незамеченной, пока пользователь не попробует загрузить фото.
+        detector_ok = True
+        if settings.ml_enabled:
+            detector_ok = bool(
+                ml_status.get("insightface")
+                or ml_status.get("mediapipe")
+                or ml_status.get("detectors") == "demo"
+                or settings.ml_provider_demo
+            )
+
+        healthy = db_ok and detector_ok
         return {
             "status": "ok" if healthy else "degraded",
             "database": db_ok,
