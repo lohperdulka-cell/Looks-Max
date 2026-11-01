@@ -766,6 +766,24 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
   line-height: 1.45;
 }
 
+/* --- Выбор пола на странице оценки ---------------------------------------- */
+.gender-pick { margin: 14px 0 4px; }
+.gender-pick-label { display: block; font-size: .86rem; color: var(--fg-muted); margin-bottom: 7px; }
+.gender-pick-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.gender-chip {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: color .2s var(--ease), border-color .2s var(--ease), background .2s var(--ease);
+}
+.gender-chip:hover { color: var(--fg); border-color: var(--accent); }
+.gender-chip.is-active { color: #04121a; background: var(--accent); border-color: var(--accent); font-weight: 600; }
+
 /* --- Градиентная шкала метрики -------------------------------------------- */
 /* Полоса «плохо → хорошо» с маркером значения пользователя и отметкой эталона. */
 .gauge {

@@ -38,6 +38,19 @@
 
         <div class="quality-report" data-quality hidden></div>
 
+        <div class="gender-pick" data-gender-pick>
+          <span class="gender-pick-label">Пол для эталонов:</span>
+          <div class="gender-pick-group" role="radiogroup" aria-label="Пол для эталонов метрик">
+            <button type="button" class="gender-chip" data-gender="male" role="radio" aria-checked="false">Мужской</button>
+            <button type="button" class="gender-chip" data-gender="female" role="radio" aria-checked="false">Женский</button>
+            <button type="button" class="gender-chip" data-gender="other" role="radio" aria-checked="false">Другой</button>
+          </div>
+          <p class="hint">
+            Пол выбирает эталоны для четырёх метрик. Он не распознаётся по фото,
+            поэтому его указываете вы — это заменяет отдельную модель пола.
+          </p>
+        </div>
+
         <div class="rate-actions">
           <button class="btn btn-primary" type="button" data-run-preview disabled>
             Рассчитать метрики

@@ -25,6 +25,7 @@
   const reportBtn = $('[data-create-report]');
   const previewEmpty = $('[data-preview-empty]');
   const previewContent = $('[data-preview-content]');
+  const genderPick = $('[data-gender-pick]');
 
   const ctx = canvas.getContext('2d');
 
@@ -51,6 +52,47 @@
     progress.hidden = value <= 0;
     if (progressBar) progressBar.style.width = `${Math.round(value * 100)}%`;
     if (value >= 1) setTimeout(() => { progress.hidden = true; }, 600);
+  };
+
+  /* --- Пол для эталонов ---------------------------------------------------- */
+  // MediaPipe не предсказывает пол, поэтому эталоны диморфизма берутся из
+  // профиля. Кнопки позволяют задать пол, не уходя со страницы оценки.
+  const syncGenderChips = (gender) => {
+    if (!genderPick) return;
+    $$('.gender-chip', genderPick).forEach((btn) => {
+      const active = btn.dataset.gender === gender;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-checked', String(active));
+    });
+  };
+
+  const saveGender = async (gender) => {
+    try {
+      const profile = await api('/api/profile', {
+        method: 'PATCH',
+        body: { gender },
+      });
+      syncGenderChips(profile.gender || '');
+      resetPreview();
+      toast('Пол сохранён: эталоны метрик обновятся при следующем расчёте.', 'success');
+    } catch (err) {
+      toast(err.message || 'Не удалось сохранить пол', 'error');
+    }
+  };
+
+  if (genderPick) {
+    genderPick.addEventListener('click', (e) => {
+      const btn = e.target.closest('.gender-chip');
+      if (btn) saveGender(btn.dataset.gender);
+    });
+  }
+
+  const loadGender = async () => {
+    if (!genderPick) return;
+    try {
+      const profile = await api('/api/profile');
+      syncGenderChips(profile.gender || '');
+    } catch { /* гость — кнопки остаются неактивными */ }
   };
 
   /* --- Загрузка файла ------------------------------------------------------ */
@@ -401,6 +443,7 @@
 
   /* --- Восстановление последнего фото при заходе --------------------------- */
   (async () => {
+    await loadGender();
     try {
       const list = await api('/api/photos?limit=1');
       if (!list.items || !list.items.length) return;
