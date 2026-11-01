@@ -2,13 +2,14 @@
 # FaceMetric — образ для Render (free tier) и локального docker-compose.
 #
 # Профиль сборки задаётся ARG INSTALL_EXTRAS:
-#   core — только веб-приложение. Фото принимается, но оценка недоступна:
-#          для расчёта метрик нужны OpenCV/numpy (поэтому ML_ENABLED=false).
-#   full — + ML (opencv-headless, numpy) и PDF (weasyprint). Провайдеры
-#          InsightFace/MediaPipe подключаются отдельно.
+#   core — веб-приложение + numpy/OpenCV (они в ядре). Демо-провайдер считает
+#          метрики по синтетической сетке, поэтому конвейер работает целиком.
+#   full — + PDF (weasyprint). Провайдеры InsightFace/MediaPipe подключаются
+#          отдельно через extras [ml].
 #
 # Render free даёт 512 МБ RAM: InsightFace (onnxruntime + buffalo_l) и
-# MediaPipe в этот лимит не влезают, поэтому на free собирайте core.
+# MediaPipe в этот лимит не влезают, поэтому на free собирайте core и
+# оставляйте демо-провайдер (ML_PROVIDER_DEMO=true).
 FROM python:3.12-slim AS base
 
 ARG INSTALL_EXTRAS=core
