@@ -7,8 +7,10 @@ requires-python = ">=3.11"
 license = { text = "Proprietary" }
 authors = [{ name = "VA digital studio" }]
 
-# Ядро приложения. Тяжёлые ML-зависимости вынесены в extras, чтобы приложение
-# поднималось (и тестировалось) в окружениях без GPU/onnxruntime.
+# Ядро приложения. Обработка изображений (декодирование, выравнивание по глазам,
+# оценка резкости/яркости) и расчёт метрик — базовая функциональность, поэтому
+# numpy и OpenCV входят в ядро. Тяжёлые детекторы лица вынесены в extras, чтобы
+# приложение поднималось в окружениях без GPU/onnxruntime.
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
@@ -29,13 +31,15 @@ dependencies = [
     "python-slugify>=8.0",
     "pillow>=11.0",
     "itsdangerous>=2.2",
+    "numpy>=1.26",
+    "opencv-python-headless>=4.10",
 ]
 
 [project.optional-dependencies]
-# Компьютерное зрение и метрики лица.
+# Детекторы лица: InsightFace (106 точек + пол/возраст) и MediaPipe (468 точек).
+# Без них работает демо-провайдер (синтетическая сетка) — конвейер проверяем,
+# реальные измерения недоступны.
 ml = [
-    "numpy>=1.26",
-    "opencv-python-headless>=4.10",
     "insightface>=0.7.3",
     "onnxruntime>=1.20",
     "mediapipe>=0.10.18",

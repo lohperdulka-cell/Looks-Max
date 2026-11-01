@@ -132,13 +132,23 @@ def create_app() -> FastAPI:
             db_ok = False
             logger.error("health.db.failed", error=str(exc))
 
-        ml_status: dict[str, object] = {"enabled": settings.ml_enabled}
+        ml_status: dict[str, object] = {
+            "enabled": settings.ml_enabled,
+            "primary": settings.ml_provider_primary,
+            "fallback": settings.ml_provider_fallback,
+            "demo": settings.ml_provider_demo,
+        }
         if settings.ml_enabled:
             try:
                 from app.ml.landmarks import _load_insightface, _load_mediapipe
 
-                ml_status["insightface"] = _load_insightface() is not None
-                ml_status["mediapipe"] = _load_mediapipe() is not None
+                # Загружаем только реально сконфигурированные провайдеры:
+                # на демо-режиме тяжёлые веса не трогаем вовсе.
+                if settings.ml_provider_primary in ("insightface", "mediapipe"):
+                    ml_status["insightface"] = _load_insightface() is not None
+                    ml_status["mediapipe"] = _load_mediapipe() is not None
+                else:
+                    ml_status["detectors"] = "demo"
             except Exception as exc:
                 ml_status["error"] = str(exc)
 

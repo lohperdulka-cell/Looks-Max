@@ -15,6 +15,13 @@
     return m ? decodeURIComponent(m[1]) : null;
   };
 
+  // Экранирование для подстановки в innerHTML (данные из API).
+  const escapeHtml = (value) =>
+    String(value ?? '').replace(/[&<>"']/g, (ch) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+  window.fmEscape = escapeHtml;
+
   /* --- Тема (localStorage) ------------------------------------------------- */
   const THEME_KEY = 'fm-theme';
   const applyTheme = (theme) => {
@@ -311,5 +318,5 @@
   }
 
   /* --- Публичный API ------------------------------------------------------- */
-  window.fm = { api, toast, getCookie, observeReveals };
+  window.fm = { api, toast, getCookie, observeReveals, escapeHtml };
 })();

@@ -18,7 +18,7 @@ from app.core.deps import CurrentUser, DbSession
 from app.core.limiter import limiter
 from app.core.storage import delete_media, resolve_media_path, save_user_image
 from app.logging_config import get_logger
-from app.ml.constants import DISCLAIMER
+from app.ml.constants import DEMO_DISCLAIMER, DISCLAIMER
 from app.ml.landmarks import FaceLandmarks, LandmarkError
 from app.ml.metrics import compute_raw_metrics
 from app.ml.preprocessing import decode_image, preprocess
@@ -172,6 +172,7 @@ async def upload_photo(
         landmarks=photo.landmarks,
         warnings=result.warnings,
         image_url=f"/api/photos/{photo.id}/image",
+        is_demo=lm.provider == "demo",
     )
 
 
@@ -203,6 +204,7 @@ async def get_photo(photo_id: int, user: CurrentUser, db: DbSession) -> PhotoDet
         landmarks=photo.landmarks,
         warnings=[],
         image_url=f"/api/photos/{photo.id}/image",
+        is_demo=photo.landmarks_provider == "demo",
     )
 
 
@@ -273,6 +275,7 @@ async def update_landmarks(
         landmarks=photo.landmarks,
         warnings=[],
         image_url=f"/api/photos/{photo.id}/image",
+        is_demo=photo.landmarks_provider == "demo",
     )
 
 
@@ -295,6 +298,7 @@ async def preview_score(
 
     lm = _landmarks_from_dict(photo.landmarks)
     gender = photo.landmarks.get("gender") or user.gender
+    demo = photo.landmarks_provider == "demo"
     weights, enabled = await _load_metric_weights(db)
 
     def _compute() -> PreviewOut:
@@ -311,7 +315,8 @@ async def preview_score(
             strengths=[_metric_preview(m) for m in strengths],
             growth=[_metric_preview(m) for m in growth],
             missing=result.missing,
-            disclaimer=DISCLAIMER,
+            disclaimer=DEMO_DISCLAIMER if demo else DISCLAIMER,
+            is_demo=demo,
         )
 
     return await run_in_threadpool(_compute)

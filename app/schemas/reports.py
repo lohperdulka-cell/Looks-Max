@@ -75,6 +75,7 @@ class ReportOut(ReportSummary):
     growth: list[MetricOut] = Field(default_factory=list)
     disclaimer: str = ""
     image_url: str = ""
+    is_demo: bool = False
 
 
 class ReportListOut(BaseModel):
@@ -96,6 +97,7 @@ class PublicReportOut(BaseModel):
     disclaimer: str = ""
     model_version: str
     created_at: datetime
+    is_demo: bool = False
 
 
 class ShareUpdate(BaseModel):

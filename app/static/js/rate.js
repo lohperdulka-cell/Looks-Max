@@ -270,6 +270,9 @@
     qualityBox.hidden = false;
     qualityBox.className = `quality-report is-${level}`;
     qualityBox.innerHTML =
+      (state.photo && state.photo.is_demo
+        ? '<p class="demo-note">Демо-режим: детектор лица не установлен, точки синтетические.</p>'
+        : '') +
       `<div class="quality-head"><strong>${label}</strong><span>${pct}%</span></div>` +
       `<div class="progress"><i style="width:${pct}%"></i></div>` +
       (warnings.length

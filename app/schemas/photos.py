@@ -39,6 +39,7 @@ class PhotoDetail(PhotoOut):
     landmarks: dict[str, Any] | None = None
     warnings: list[str] = Field(default_factory=list)
     image_url: str
+    is_demo: bool = False
 
 
 class MetricPreview(BaseModel):
@@ -68,6 +69,7 @@ class PreviewOut(BaseModel):
     growth: list[MetricPreview]
     missing: list[str] = Field(default_factory=list)
     disclaimer: str
+    is_demo: bool = False
 
 
 class PhotoVisibilityUpdate(BaseModel):

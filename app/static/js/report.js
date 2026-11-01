@@ -157,6 +157,12 @@
     $('[data-strengths]').innerHTML = report.strengths.map(metricItem).join('') || '<li class="muted">—</li>';
     $('[data-growth]').innerHTML = report.growth.map(metricItem).join('') || '<li class="muted">—</li>';
     $('[data-disclaimer]').textContent = report.disclaimer;
+    if (report.is_demo) {
+      const note = document.createElement('p');
+      note.className = 'demo-note';
+      note.textContent = 'Демо-режим: точки лица синтетические, баллы не описывают внешность.';
+      $('[data-disclaimer]').before(note);
+    }
 
     renderTable(report.metrics);
     renderRecommendations(report.recommendations);

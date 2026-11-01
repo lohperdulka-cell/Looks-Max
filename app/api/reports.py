@@ -148,4 +148,5 @@ async def get_public_report(token: str, db: DbSession) -> PublicReportOut:
         disclaimer=payload.disclaimer,
         model_version=payload.model_version,
         created_at=payload.created_at,
+        is_demo=payload.is_demo,
     )

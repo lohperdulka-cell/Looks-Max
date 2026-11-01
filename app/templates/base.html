@@ -21,7 +21,7 @@
   <link rel="canonical" href="{{ base_url }}{{ request.url.path if request else '/' }}">
   {% block head_extra %}{% endblock %}
 </head>
-<body>
+<body data-onboarding="{{ '1' if onboarding else '0' }}">
   <a class="skip-link" href="#main">К основному содержимому</a>
 
   <header class="site-header">

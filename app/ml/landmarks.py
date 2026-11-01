@@ -276,27 +276,49 @@ def _extract_with_mediapipe(image_bgr: np.ndarray) -> FaceLandmarks | None:
     )
 
 
-def extract_landmarks(image_bgr: np.ndarray) -> FaceLandmarks:
-    """Извлекает landmarks: InsightFace, при неудаче — MediaPipe.
+def _extract_with_demo(image_bgr: np.ndarray) -> FaceLandmarks | None:
+    """Демо-провайдер: синтетическая сетка лица (см. demo_landmarks)."""
+    from app.ml.demo_landmarks import synthetic_bbox, synthetic_points
 
-    Бросает LandmarkError, если ни один провайдер не смог найти лицо.
+    points = synthetic_points(image_bgr)
+    return FaceLandmarks(
+        points=points,
+        provider="demo",
+        bbox=synthetic_bbox(points),
+        extra={"demo": True},
+    )
+
+
+_EXTRACTORS: dict[str, Any] = {
+    "insightface": lambda img: _extract_with_insightface(img),
+    "mediapipe": lambda img: _extract_with_mediapipe(img),
+    "demo": lambda img: _extract_with_demo(img),
+}
+
+
+def extract_landmarks(image_bgr: np.ndarray) -> FaceLandmarks:
+    """Извлекает landmarks: InsightFace → MediaPipe → demo.
+
+    Бросает LandmarkError, если ML выключен или не сработал ни один провайдер.
+    Провайдер `demo` (синтетическая сетка) включается только когда в списке
+    провайдеров явно задан DEMO — он не измеряет реальное лицо, а проверяет
+    конвейер на деплое без тяжёлых ML-зависимостей.
     """
     if not settings.ml_enabled:
         raise LandmarkError("ML отключён в настройках (ML_ENABLED=false)")
 
-    primary = settings.ml_provider_primary
-    fallback = settings.ml_provider_fallback
+    order = [settings.ml_provider_primary, settings.ml_provider_fallback]
+    if settings.ml_provider_demo:
+        order.append("demo")
 
-    order = [primary, fallback] if primary != fallback else [primary]
     last_error: Exception | None = None
-
+    seen: set[str] = set()
     for provider in order:
+        if not provider or provider in seen or provider not in _EXTRACTORS:
+            continue
+        seen.add(provider)
         try:
-            result = (
-                _extract_with_insightface(image_bgr)
-                if provider == "insightface"
-                else _extract_with_mediapipe(image_bgr)
-            )
+            result = _EXTRACTORS[provider](image_bgr)
         except Exception as exc:
             last_error = exc
             logger.warning("ml.provider.error", provider=provider, error=str(exc))

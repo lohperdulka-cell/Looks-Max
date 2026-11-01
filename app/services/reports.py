@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 from app.ml.constants import (
     CATEGORY_LABELS,
     CATEGORY_WEIGHTS,
+    DEMO_DISCLAIMER,
     DISCLAIMER,
     MODEL_VERSION,
     MetricCategory,
@@ -131,7 +132,11 @@ async def create_report(
         overall_score=result.overall,
         harmony_score=result.harmony,
         categories={item["key"]: item["score"] for item in breakdown},
-        summary={"missing": result.missing, "categories_detail": breakdown},
+        summary={
+            "missing": result.missing,
+            "categories_detail": breakdown,
+            "is_demo": photo.landmarks_provider == "demo",
+        },
         recommendations={
             "items": [
                 {
@@ -268,10 +273,16 @@ def _recommendations(report: Report) -> list[RecommendationOut]:
     return [RecommendationOut(**item) for item in (report.recommendations or {}).get("items", [])]
 
 
+def is_demo_report(report: Report) -> bool:
+    """Отчёт построен на синтетических точках (детектор лица не установлен)."""
+    return bool((report.summary or {}).get("is_demo"))
+
+
 def serialize_report(report: Report) -> ReportOut:
     """Полный отчёт в схему API."""
     metrics = serialize_metrics(report)
     strengths, growth = split_strengths_growth(metrics)
+    demo = is_demo_report(report)
     return ReportOut(
         **ReportSummary.model_validate(report).model_dump(),
         categories_detail=_categories_detail(report),
@@ -279,8 +290,9 @@ def serialize_report(report: Report) -> ReportOut:
         recommendations=_recommendations(report),
         strengths=strengths,
         growth=growth,
-        disclaimer=DISCLAIMER,
+        disclaimer=DEMO_DISCLAIMER if demo else DISCLAIMER,
         image_url=f"/api/photos/{report.photo_id}/image",
+        is_demo=demo,
     )
 
 

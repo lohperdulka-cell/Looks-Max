@@ -1,26 +1,30 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-slim AS base
+# FaceMetric — образ для Render (free tier) и локального docker-compose.
+#
+# Профиль сборки задаётся ARG INSTALL_EXTRAS:
+#   core — только веб-приложение. Фото принимается, но оценка недоступна:
+#          для расчёта метрик нужны OpenCV/numpy (поэтому ML_ENABLED=false).
+#   full — + ML (opencv-headless, numpy) и PDF (weasyprint). Провайдеры
+#          InsightFace/MediaPipe подключаются отдельно.
+#
+# Render free даёт 512 МБ RAM: InsightFace (onnxruntime + buffalo_l) и
+# MediaPipe в этот лимит не влезают, поэтому на free собирайте core.
+FROM python:3.12-slim AS base
+
+ARG INSTALL_EXTRAS=core
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PORT=8000
 
-# Системные библиотеки: OpenCV/InsightFace нуждаются в libgl, libglib, libgomp;
-# weasyprint (PDF) — в pango/cairo/gdk-pixbuf.
+# libpq-dev — asyncpg; libgl/libglib/libgomp — OpenCV/numpy; curl — healthcheck.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        build-essential \
+        libpq-dev \
         libgl1 \
         libglib2.0-0 \
         libgomp1 \
-        libegl1 \
-        libgles2 \
-        libpq-dev \
-        libpango-1.0-0 \
-        libpangocairo-1.0-0 \
-        libcairo2 \
-        libgdk-pixbuf-2.0-0 \
-        shared-mime-info \
         curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -28,7 +32,8 @@ WORKDIR /app
 
 # Сначала зависимости — кэшируем слой.
 COPY pyproject.toml README.md ./
-RUN pip install --upgrade pip && pip install ".[ml,pdf]"
+RUN pip install --upgrade pip \
+    && if [ "$INSTALL_EXTRAS" = "full" ]; then pip install ".[ml,pdf]"; else pip install .; fi
 
 COPY . .
 
@@ -36,7 +41,8 @@ RUN mkdir -p data/media data/models
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD curl -fsS http://localhost:8000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -fsS "http://localhost:${PORT}/health" || exit 1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Миграции применяются на старте, затем поднимается сервер.
+CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

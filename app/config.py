@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     ml_enabled: bool = True
     ml_provider_primary: str = "insightface"
     ml_provider_fallback: str = "mediapipe"
+    # Демо-провайдер (синтетическая сетка лица) — последний резерв для деплоя
+    # без InsightFace/MediaPipe. Не измеряет реальное лицо: только проверка
+    # работоспособности конвейера. Помечается флагом is_demo в ответах.
+    ml_provider_demo: bool = False
     ml_model_dir: Path = BASE_DIR / "data" / "models"
     ml_lazy_load: bool = True
     # MediaPipe 0.10+/1.x использует Tasks API и требует .task-модель.

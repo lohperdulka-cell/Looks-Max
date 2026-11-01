@@ -49,9 +49,20 @@ def _angle(a: np.ndarray, vertex: np.ndarray, b: np.ndarray) -> float:
 
 
 def _tilt_deg(inner: np.ndarray, outer: np.ndarray) -> float:
-    """Наклон линии inner→outer относительно горизонтали (градусы, + вверх)."""
-    d = outer - inner
-    return math.degrees(math.atan2(-d[1], d[0]))
+    """Наклон линии уголков глаза/брови в градусах, положительный — наружный выше.
+
+    Направление по x нормализуется: у левого глаза наружный уголок левее
+    внутреннего, у правого — правее. Без нормализации левая и правая стороны
+    дают ~180° и ~0°, и среднее уходит в ~90°.
+    """
+    # Берём модуль по x: у правого глаза наружный уголок левее внутреннего,
+    # у левого — правее. Знак вертикального смещения при этом сохраняется,
+    # поэтому наклон остаётся «наружный выше → положительный» для обеих сторон.
+    dy = float(outer[1] - inner[1])
+    dx = abs(float(outer[0] - inner[0]))
+    if dx < 1e-9:
+        return 0.0
+    return math.degrees(math.atan2(-dy, dx))
 
 
 def _face_width(pts: np.ndarray) -> float:
@@ -269,7 +280,10 @@ def compute_raw_metrics(lm: FaceLandmarks, gender: str | None = None) -> RawMetr
     jaw_right = _p(pts, idx["jaw_right"])
 
     # --- Симметрия: среднее относительное отклонение зеркальных пар от оси.
-    midline_x = (forehead_top[0] + chin[0] + nose_tip[0]) / 3.0
+    # Ось симметрии — по вертикали лба и подбородка. Кончик носа в формуле
+    # давал бы асимметрию при боковом отклонении носа, которое симметрию лица
+    # не описывает.
+    midline_x = (forehead_top[0] + chin[0]) / 2.0
     deviations: list[float] = []
     for i, j in _mirror_pairs(pts):
         if i >= len(pts) or j >= len(pts):
