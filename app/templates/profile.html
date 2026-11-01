@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <header class="profile-head reveal">
+      <div class="profile-avatar" data-avatar aria-hidden="true"></div>
+      <div>
+        <h1 data-display-name>Профиль</h1>
+        <p class="muted" data-profile-meta></p>
+        <div class="profile-badges">
+          <span class="pill" data-streak>🔥 серия: 0</span>
+          <span class="pill" data-elo>ELO: 1200</span>
+          <span class="pill" data-score>Лучший балл: —</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost" type="button" data-edit-profile>Редактировать</button>
+    </header>
+
+    <div class="stats-grid reveal">
+      <div class="stat-card"><span class="stat-value" data-stat="photos_count">0</span><span class="stat-label">фото</span></div>
+      <div class="stat-card"><span class="stat-value" data-stat="reports_count">0</span><span class="stat-label">отчётов</span></div>
+      <div class="stat-card"><span class="stat-value" data-stat="exercises_count">0</span><span class="stat-label">упражнений</span></div>
+      <div class="stat-card"><span class="stat-value" data-stat="battle_votes">0</span><span class="stat-label">голосов</span></div>
+      <div class="stat-card"><span class="stat-value" data-stat="improvement">0</span><span class="stat-label">прогресс</span></div>
+      <div class="stat-card"><span class="stat-value" data-stat="public_reports">0</span><span class="stat-label">публичных</span></div>
+    </div>
+
+    <article class="card reveal">
+      <div class="card-head">
+        <h2 class="panel-title">Прогресс</h2>
+        <select data-progress-range class="select">
+          <option value="30">30 дней</option>
+          <option value="90">90 дней</option>
+          <option value="180">полгода</option>
+        </select>
+      </div>
+      <div class="chart-wrap"><canvas data-progress-chart height="280"></canvas></div>
+      <p class="muted small" data-progress-delta></p>
+    </article>
+
+    <article class="card reveal">
+      <h2 class="panel-title">До / после</h2>
+      <div data-before-after>
+        <p class="muted">Загрузите и оцените минимум два фото, чтобы увидеть динамику.</p>
+      </div>
+    </article>
+
+    <article class="card reveal">
+      <h2 class="panel-title">Достижения</h2>
+      <div class="achievements" data-achievements></div>
+    </article>
+
+    <article class="card reveal">
+      <h2 class="panel-title">Мои отчёты</h2>
+      <div class="reports-list" data-reports-list></div>
+    </article>
+  </div>
+</section>
+
+<dialog class="modal" data-profile-modal>
+  <form method="dialog" class="modal-form" data-profile-form>
+    <h2>Редактировать профиль</h2>
+    <label>Отображаемое имя
+      <input type="text" name="display_name" maxlength="64" placeholder="Как вас показывать">
+    </label>
+    <label>Пол (влияет на эталоны метрик)
+      <select name="gender">
+        <option value="">не указан</option>
+        <option value="male">мужской</option>
+        <option value="female">женский</option>
+        <option value="other">другой</option>
+      </select>
+    </label>
+    <label>Год рождения
+      <input type="number" name="birth_year" min="1920" max="2020" placeholder="1995">
+    </label>
+    <label class="checkbox">
+      <input type="checkbox" name="show_in_battles">
+      <span>Показывать в мобатлах</span>
+    </label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" value="cancel" type="submit">Отмена</button>
+      <button class="btn btn-primary" value="save" type="submit">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/vendor/chart.umd.min.js" defer></script>
+<script src="/static/js/profile.js" defer></script>
+{% endblock %}

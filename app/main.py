@@ -135,12 +135,14 @@ def create_app() -> FastAPI:
     from app.api.auth import router as auth_router
     from app.api.pages import router as pages_router
     from app.api.photos import router as photos_router
+    from app.api.profile import router as profile_router
     from app.api.reports import public_router as public_reports_router
     from app.api.reports import router as reports_router
 
     application.include_router(auth_router)
     application.include_router(photos_router)
     application.include_router(reports_router)
+    application.include_router(profile_router)
     application.include_router(public_reports_router)
     application.include_router(pages_router)
 

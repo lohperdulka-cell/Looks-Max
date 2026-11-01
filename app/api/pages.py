@@ -149,3 +149,11 @@ async def public_report_page(request: Request, token: str, user: OptionalUser) -
     context = _base_context(request, user)
     context["public_token"] = token
     return templates.TemplateResponse(request, "report.html", context)
+
+
+@router.get("/profile", response_class=HTMLResponse)
+async def profile_page(request: Request, user: OptionalUser) -> Response:
+    """Страница профиля: статистика, прогресс, до/после, достижения."""
+    if user is None:
+        return RedirectResponse("/login?next=/profile", status_code=302)
+    return templates.TemplateResponse(request, "profile.html", _base_context(request, user))

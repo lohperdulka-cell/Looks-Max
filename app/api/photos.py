@@ -79,6 +79,18 @@ def _metric_preview(metric) -> MetricPreview:
     )
 
 
+async def _touch_user_progress(db: DbSession, user: User) -> None:
+    """Отмечает активность пользователя и выдаёт достижения за загрузку фото."""
+    from app.services import achievements as achievements_service
+    from app.services import profile as profile_service
+
+    await profile_service.touch_activity(db, user)
+    stats = await profile_service.collect_stats(db, user)
+    await achievements_service.award_achievements(
+        db, user, profile_service.stats_to_achievement_stats(stats)
+    )
+
+
 async def _get_owned_photo(db: DbSession, photo_id: int, user: User) -> Photo:
     """Возвращает фото, если оно принадлежит пользователю (иначе 404 — не раскрываем наличие)."""
     photo = await db.get(Photo, photo_id)
@@ -145,6 +157,8 @@ async def upload_photo(
     db.add(photo)
     await db.commit()
     await db.refresh(photo)
+    await _touch_user_progress(db, user)
+
     logger.info(
         "photos.uploaded",
         photo_id=photo.id,

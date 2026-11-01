@@ -15,6 +15,8 @@ from app.schemas.reports import (
     ReportSummary,
     ShareUpdate,
 )
+from app.services import achievements as achievements_service
+from app.services import profile as profile_service
 from app.services import reports as reports_service
 from app.services.pdf import render_pdf, render_report_html
 
@@ -40,6 +42,15 @@ async def create_report(
 
     overrides = await reports_service.load_metric_overrides(db)
     report = await reports_service.create_report(db, photo, user, overrides)
+
+    # Активность обновляет streak; достижения выдаются по текущей статистике.
+    await profile_service.touch_activity(db, user)
+    stats = await profile_service.collect_stats(db, user)
+    await profile_service.upsert_snapshot(db, user, stats)
+    await achievements_service.award_achievements(
+        db, user, profile_service.stats_to_achievement_stats(stats)
+    )
+
     return reports_service.serialize_report(report)
 
 

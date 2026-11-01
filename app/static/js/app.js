@@ -251,7 +251,7 @@
     api('/api/auth/me')
       .then((user) => {
         authSlot.innerHTML =
-          `<a class="btn btn-ghost" href="/profile">${user.display_name || user.username}</a>` +
+          `<span class="nav-user muted">${user.display_name || user.username}</span>` +
           `<button class="btn btn-ghost" type="button" data-logout>Выйти</button>`;
         const out = $('[data-logout]', authSlot);
         if (out) {
