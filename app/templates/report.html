@@ -62,6 +62,30 @@
       </div>
 
       <article class="card reveal">
+        <h2 class="panel-title">Шкалы метрик</h2>
+        <p class="muted small">
+          Градиент от красного к зелёному: маркер показывает, где на шкале
+          находится ваше значение.
+        </p>
+        <div data-gauge-list></div>
+      </article>
+
+      <article class="card reveal">
+        <h2 class="panel-title">Метрики на фото</h2>
+        <p class="muted small">
+          Для каждой метрики — то же фото с разметкой: линии, углы и пунктиры
+          показывают, что именно измерено.
+        </p>
+        <div class="metric-gallery-nav">
+          <button class="btn btn-ghost btn-sm" type="button" data-gallery-prev>← Назад</button>
+          <span class="metric-gallery-counter" data-gallery-counter>1 / 1</span>
+          <button class="btn btn-ghost btn-sm" type="button" data-gallery-next>Вперёд →</button>
+        </div>
+        <div class="metric-thumbs" data-gallery-thumbs></div>
+        <div class="metric-gallery" data-metric-gallery></div>
+      </article>
+
+      <article class="card reveal">
         <h2 class="panel-title">Все метрики</h2>
         <div class="table-wrap">
           <table class="data-table" data-metrics-table>
@@ -86,5 +110,6 @@
 
 {% block scripts %}
 <script src="/static/js/vendor/chart.umd.min.js" defer></script>
+<script src="/static/js/face-overlay.js" defer></script>
 <script src="/static/js/report.js" defer></script>
 {% endblock %}

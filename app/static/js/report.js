@@ -5,6 +5,7 @@
   'use strict';
 
   const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const api = window.fmApi;
   const toast = window.fmToast;
   if (!api || !$('[data-report-root]')) return;
@@ -22,14 +23,179 @@
 
   const scoreColor = (score) => (score >= 7.5 ? '#16a34a' : score >= 5 ? '#ca8a04' : '#dc2626');
 
+  const escapeHtml = (s) =>
+    String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  /**
+   * Градиентная шкала метрики: полоса «плохо → хорошо» и маркер значения.
+   * Позиция маркера — балл 0..10 (0 % — красный край, 100 % — зелёный).
+   */
+  const gaugeRow = (m) => {
+    const score = Math.max(0, Math.min(10, m.score));
+    const left = score * 10;
+    const raw = m.raw_value === null || m.raw_value === undefined
+      ? '—' : `${Number(m.raw_value).toFixed(2)}${m.unit ? ` ${m.unit}` : ''}`;
+    const ref = m.reference_value === null || m.reference_value === undefined
+      ? '—' : Number(m.reference_value).toFixed(2);
+    return `
+      <div class="gauge-row">
+        <div class="gauge-row-head">
+          <span>${escapeHtml(m.label)}</span>
+          <span class="gauge-row-score" style="color:${scoreColor(score)}">${score.toFixed(1)}</span>
+        </div>
+        <div class="gauge" role="img"
+             aria-label="${escapeHtml(m.label)}: ${score.toFixed(1)} из 10">
+          <span class="gauge-marker" style="left:${left}%"></span>
+        </div>
+        <div class="gauge-scale"><span>0</span><span>5</span><span>10</span></div>
+        <p class="gauge-row-value">Ваше значение: ${raw} · эталон: ${ref}</p>
+      </div>`;
+  };
+
   const metricItem = (m) => `
     <li class="metric-item">
       <div class="metric-item-head">
-        <span class="metric-item-label">${m.label}</span>
+        <span class="metric-item-label">${escapeHtml(m.label)}</span>
         <span class="metric-item-score" style="color:${scoreColor(m.score)}">${m.score.toFixed(1)}</span>
       </div>
       <div class="progress"><i style="width:${m.score * 10}%"></i></div>
     </li>`;
+
+  const renderGauges = (metrics) => {
+    const box = $('[data-gauge-list]');
+    if (!box) return;
+    box.innerHTML = metrics.map(gaugeRow).join('');
+  };
+
+  /* --- Галерея фото-оверлеев по метрикам ---------------------------------- */
+  // Для каждой метрики рисуем то же фото и накладываем геометрию, которую она
+  // измеряет (наклон глаз, углы челюсти и т. д.). Пользователь листает слайды.
+  const gallery = {
+    items: [],
+    index: 0,
+    image: null,
+    ctx: null,
+  };
+
+  const galleryDrawCurrent = () => {
+    const canvas = $('[data-gallery-canvas]');
+    if (!canvas || !gallery.image) return;
+    const item = gallery.items[gallery.index];
+    if (!item) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(gallery.image, 0, 0, canvas.width, canvas.height);
+    if (window.fmFaceOverlay && item.pointsPx) {
+      window.fmFaceOverlay.drawMetric(ctx, item.pointsPx, item.key, { color: scoreColor(item.score) });
+    }
+  };
+
+  const galleryShow = (index) => {
+    if (!gallery.items.length) return;
+    gallery.index = (index + gallery.items.length) % gallery.items.length;
+    const item = gallery.items[gallery.index];
+
+    const canvas = $('[data-gallery-canvas]');
+    if (canvas && gallery.image) {
+      const ratio = gallery.image.naturalHeight / gallery.image.naturalWidth;
+      canvas.width = Math.min(gallery.image.naturalWidth, 720);
+      canvas.height = Math.round(canvas.width * ratio);
+      item.pointsPx = item.points.map(([x, y]) => [x * canvas.width, y * canvas.height]);
+    }
+
+    const title = $('[data-gallery-title]');
+    const cat = $('[data-gallery-cat]');
+    const desc = $('[data-gallery-desc]');
+    const compare = $('[data-gallery-compare]');
+    const gauge = $('[data-gallery-gauge]');
+    const counter = $('[data-gallery-counter]');
+
+    if (title) title.textContent = item.label;
+    if (cat) cat.textContent = item.category_label || '';
+    if (desc) desc.textContent = item.notes || '';
+    if (compare) {
+      const raw = item.raw_value === null || item.raw_value === undefined
+        ? '—' : `${Number(item.raw_value).toFixed(2)}${item.unit ? ` ${item.unit}` : ''}`;
+      const ref = item.reference_value === null || item.reference_value === undefined
+        ? '—' : Number(item.reference_value).toFixed(2);
+      compare.textContent = `Ваше значение: ${raw} · эталон: ${ref}`;
+    }
+    if (gauge) gauge.innerHTML = gaugeRow(item);
+    if (counter) counter.textContent = `${gallery.index + 1} / ${gallery.items.length}`;
+
+    $$('[data-gallery-thumbs] .metric-thumb').forEach((btn, i) => {
+      btn.classList.toggle('is-active', i === gallery.index);
+    });
+
+    galleryDrawCurrent();
+  };
+
+  const renderGallery = (report) => {
+    const wrap = $('[data-metric-gallery]');
+    const thumbs = $('[data-gallery-thumbs]');
+    const lm = report.landmarks;
+    if (!wrap || !lm || !lm.points || !lm.points.length || !report.image_url) return;
+
+    gallery.items = report.metrics.map((m) => ({
+      key: m.key,
+      label: m.label,
+      category_label: m.category_label,
+      score: m.score,
+      raw_value: m.raw_value,
+      reference_value: m.reference_value,
+      unit: m.unit,
+      notes: m.notes,
+      points: lm.points,
+      pointsPx: null,
+    }));
+
+    wrap.innerHTML = `
+      <div class="metric-shot">
+        <div class="metric-shot-canvas-wrap">
+          <canvas data-gallery-canvas width="720" height="720"
+                  aria-label="Фото с разметкой метрики"></canvas>
+        </div>
+        <div class="metric-shot-info">
+          <span class="metric-shot-cat" data-gallery-cat></span>
+          <h3 data-gallery-title></h3>
+          <div data-gallery-gauge></div>
+          <p class="metric-shot-compare" data-gallery-compare></p>
+          <p class="metric-shot-desc" data-gallery-desc></p>
+        </div>
+      </div>`;
+
+    if (thumbs) {
+      thumbs.innerHTML = gallery.items
+        .map((m, i) => `<button type="button" class="metric-thumb" data-gallery-thumb="${i}">${escapeHtml(m.label)}</button>`)
+        .join('');
+      thumbs.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-gallery-thumb]');
+        if (btn) galleryShow(Number(btn.dataset.galleryThumb));
+      });
+    }
+
+    const img = new Image();
+    img.onload = () => {
+      gallery.image = img;
+      galleryShow(0);
+    };
+    img.onerror = () => {
+      const box = $('[data-metric-gallery]');
+      if (box) box.innerHTML = '<p class="muted small">Не удалось загрузить фото для разметки.</p>';
+    };
+    img.src = report.image_url;
+  };
+
+  const galleryPrev = $('[data-gallery-prev]');
+  const galleryNext = $('[data-gallery-next]');
+  if (galleryPrev) galleryPrev.addEventListener('click', () => galleryShow(gallery.index - 1));
+  if (galleryNext) galleryNext.addEventListener('click', () => galleryShow(gallery.index + 1));
+  document.addEventListener('keydown', (e) => {
+    if (!gallery.items.length || isPublic) return;
+    if (e.key === 'ArrowLeft') galleryShow(gallery.index - 1);
+    if (e.key === 'ArrowRight') galleryShow(gallery.index + 1);
+  });
 
   const renderCharts = (data) => {
     if (typeof Chart === 'undefined') return;
@@ -165,6 +331,8 @@
     }
 
     renderTable(report.metrics);
+    renderGauges(report.metrics);
+    renderGallery(report);
     renderRecommendations(report.recommendations);
     renderCharts(report);
     updateShareBox(report);

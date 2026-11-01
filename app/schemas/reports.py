@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -76,6 +77,9 @@ class ReportOut(ReportSummary):
     disclaimer: str = ""
     image_url: str = ""
     is_demo: bool = False
+    # Точки лица в нормализованных координатах: нужны, чтобы нарисовать
+    # разметку метрик поверх фото в отчёте.
+    landmarks: dict[str, Any] | None = None
 
 
 class ReportListOut(BaseModel):

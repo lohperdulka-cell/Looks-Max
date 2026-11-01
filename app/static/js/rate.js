@@ -142,8 +142,16 @@
         if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
         state.image = img;
         resizeCanvasToImage(img);
-        draw();
         if (canvasHint) canvasHint.hidden = true;
+        // Анимация «сканирования»: точки проявляются за линией сканера,
+        // затем соединяются линиями. После неё — обычный режим редактора.
+        if (window.fmScan && state.points.length) {
+          window.fmScan.playScan(canvas, img, state.points, {
+            onDone: () => draw(),
+          });
+        } else {
+          draw();
+        }
         resolve(img);
       };
       img.onerror = () => reject(new Error('Не удалось отобразить изображение'));

@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import secrets
+from typing import Any
 
 import numpy as np
 from sqlalchemy import func, select
@@ -210,7 +211,7 @@ async def get_owned_report(db: AsyncSession, report_id: int, user_id: int) -> Re
         await db.execute(
             select(Report)
             .where(Report.id == report_id, Report.user_id == user_id)
-            .options(selectinload(Report.metrics))
+            .options(selectinload(Report.metrics), selectinload(Report.photo))
         )
     ).scalar_one_or_none()
     return report
@@ -224,7 +225,7 @@ async def get_public_report(db: AsyncSession, token: str) -> Report | None:
         await db.execute(
             select(Report)
             .where(Report.public_token == token, Report.is_public.is_(True))
-            .options(selectinload(Report.metrics))
+            .options(selectinload(Report.metrics), selectinload(Report.photo))
         )
     ).scalar_one_or_none()
     return report
@@ -278,6 +279,14 @@ def is_demo_report(report: Report) -> bool:
     return bool((report.summary or {}).get("is_demo"))
 
 
+def _report_landmarks(report: Report) -> dict[str, Any] | None:
+    """Точки лица отчёта: нужны для разметки метрик поверх фото."""
+    photo = getattr(report, "photo", None)
+    if photo is None or not photo.landmarks or not photo.landmarks.get("points"):
+        return None
+    return photo.landmarks
+
+
 def serialize_report(report: Report) -> ReportOut:
     """Полный отчёт в схему API."""
     metrics = serialize_metrics(report)
@@ -293,6 +302,7 @@ def serialize_report(report: Report) -> ReportOut:
         disclaimer=DEMO_DISCLAIMER if demo else DISCLAIMER,
         image_url=f"/api/photos/{report.photo_id}/image",
         is_demo=demo,
+        landmarks=_report_landmarks(report),
     )
 
 
