@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Страница не найдена — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container narrow center">
+    <h1>404</h1>
+    <p class="muted">Такой страницы нет. Возможно, статья снята с публикации.</p>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="/">На главную</a>
+      <a class="btn btn-ghost" href="/blog">В блог</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

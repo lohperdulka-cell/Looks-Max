@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}О нас — {{ app_name }}{% endblock %}
+{% block description %}FaceMetric — платформа объективной оценки пропорций лица: метрики, отчёт, прогресс и честные ограничения модели.{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container narrow">
+    <header class="page-head reveal">
+      <h1>О нас</h1>
+      <p class="muted">VA digital studio — небольшая команда инженеров, которые устали от «оцените меня» без цифр.</p>
+    </header>
+
+    <div class="prose reveal">
+      <p>
+        FaceMetric измеряет геометрические пропорции лица по фотографии и сравнивает
+        их с популяционными ориентирами из антропометрии. Мы показываем не оценку
+        «нравится / не нравится», а измеримые метрики: симметрию, пропорции,
+        линию челюсти, посадку глаз, диморфизм.
+      </p>
+      <p>
+        Мы верим, что честнее показать человеку числа и их источники, чем кормить
+        его комплиментами алгоритма. Поэтому у каждой метрики есть эталон, допуск,
+        вес и ссылка на публикацию — они открыты на странице
+        <a href="/metrics">«О метриках»</a>.
+      </p>
+    </div>
+
+    <div class="about-stats reveal">
+      <div class="card"><span>{{ stats.users }}</span><small>пользователей</small></div>
+      <div class="card"><span>{{ stats.reports }}</span><small>отчётов</small></div>
+      <div class="card"><span>{{ stats.metrics }}</span><small>метрик</small></div>
+      <div class="card"><span>{{ stats.battles }}</span><small>голосов в батлах</small></div>
+    </div>
+
+    <h2 class="panel-title reveal">Принципы</h2>
+    <ul class="principle-list reveal">
+      <li><strong>Измеримость.</strong> Никаких выводов без числа и источника.</li>
+      <li><strong>Приватность.</strong> Фото видит только владелец; батлы — только по opt-in.</li>
+      <li><strong>Честность.</strong> Модель формализует пропорции, а не определяет красоту.</li>
+      <li><strong>Без медицины.</strong> Мы не ставим диагнозы и не назначаем процедуры.</li>
+    </ul>
+
+    <p class="muted small reveal">
+      Есть вопрос или идея? Напишите на странице <a href="/contacts">контактов</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

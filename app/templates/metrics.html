@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}О метриках — {{ app_name }}{% endblock %}
+{% block description %}Справочник метрик лица: эталоны, допуски, веса и научные источники, по которым работает модель.{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <header class="page-head reveal">
+      <h1>О метриках</h1>
+      <p class="muted">
+        Всего {{ total }} метрик в 6 категориях. Значения — популяционные ориентиры
+        из антропометрии и эстетической хирургии, а не истина о внешности.
+      </p>
+    </header>
+
+    {% for key, group in groups.items() %}
+      <section class="metrics-group reveal">
+        <h2 class="panel-title">{{ group.label }}</h2>
+        <div class="table-wrap card">
+          <table class="admin-table">
+            <thead>
+              <tr><th>Метрика</th><th>Эталон</th><th>Допуск</th><th>Вес</th><th>Источник</th></tr>
+            </thead>
+            <tbody>
+              {% for m in group['items'] %}
+                <tr>
+                  <td>
+                    <strong>{{ m.label }}</strong>
+                    {% if m.notes %}<div class="muted small">{{ m.notes }}</div>{% endif %}
+                  </td>
+                  <td>{{ m.reference }}{{ m.unit }}</td>
+                  <td>±{{ m.tolerance }}{{ m.unit }}</td>
+                  <td>{{ m.weight }}</td>
+                  <td class="muted small">{{ m.source }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {% endfor %}
+
+    <section class="reveal">
+      <h2 class="panel-title">Источники</h2>
+      <ul class="source-list">
+        {% for s in sources %}
+          <li><strong>{{ s.source }}</strong> — {{ s.metrics | join(', ') }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+
+    <p class="disclaimer">
+      FaceMetric не ставит диагнозы и не заменяет врача. Отклонение от эталона —
+      не приговор: это точка отсчёта для работы над собой.
+    </p>
+  </div>
+</section>
+{% endblock %}

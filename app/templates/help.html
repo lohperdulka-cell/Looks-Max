@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Помощь — {{ app_name }}{% endblock %}
+{% block description %}Ответы на частые вопросы о загрузке фото, отчётах, батлах и приватности.{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container narrow">
+    <header class="page-head reveal">
+      <h1>Помощь</h1>
+      <p class="muted">Частые вопросы и короткие инструкции.</p>
+    </header>
+
+    {% if faq %}
+      <div class="faq-list reveal">
+        {% for item in faq %}
+          <details class="faq-item card">
+            <summary>{{ item.question }}</summary>
+            <div class="prose">{{ item.answer_md | markdown | safe }}</div>
+          </details>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="prose reveal">
+        <h2>Как получить честную оценку</h2>
+        <ul>
+          <li>Анфас, нейтральное выражение, камера на уровне глаз.</li>
+          <li>Ровный свет без резких теней и контрового света.</li>
+          <li>Волосы убраны со лба, очки сняты, лицо не перекрыто.</li>
+          <li>Без фильтров, ретуши и широкоугольного приближения.</li>
+        </ul>
+        <h2>Что делать дальше</h2>
+        <ol>
+          <li>Посмотрите отчёт и зоны роста.</li>
+          <li>Отметьте упражнения под свои метрики.</li>
+          <li>Задайте вопрос ИИ-консультанту и соберите план на 30 дней.</li>
+          <li>Повторите фото через 2–4 недели и сравните «до/после» в профиле.</li>
+        </ol>
+      </div>
+    {% endif %}
+
+    <p class="muted small reveal">
+      Не нашли ответ? Напишите через <a href="/contacts">форму обратной связи</a>.
+    </p>
+  </div>
+</section>
+{% endblock %}

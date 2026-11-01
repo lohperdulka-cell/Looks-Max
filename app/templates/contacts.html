@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Контакты — {{ app_name }}{% endblock %}
+{% block description %}Свяжитесь с командой FaceMetric: вопросы, баги, идеи и сотрудничество.{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container narrow">
+    <header class="page-head reveal">
+      <h1>Контакты</h1>
+      <p class="muted">Отвечаем на обращения в течение пары рабочих дней.</p>
+    </header>
+
+    <div class="contact-grid reveal">
+      <article class="card">
+        <h2 class="panel-title">Написать нам</h2>
+        <form class="contact-form" data-contact-form>
+          <label class="field"><span>Тема</span><input name="subject" required maxlength="200"></label>
+          <label class="field"><span>Имя</span><input name="name" maxlength="128"></label>
+          <label class="field"><span>Email для ответа</span><input name="email" type="email" maxlength="255"></label>
+          <label class="field"><span>Сообщение</span><textarea name="message" rows="6" required maxlength="5000"></textarea></label>
+          <button class="btn btn-primary" type="submit">Отправить</button>
+          <p class="form-status muted small" data-contact-status></p>
+        </form>
+      </article>
+
+      <aside class="card">
+        <h2 class="panel-title">Прямые каналы</h2>
+        <ul class="contact-list">
+          <li><span class="muted small">Поддержка</span> support@facemetric.example</li>
+          <li><span class="muted small">Сотрудничество</span> partners@facemetric.example</li>
+          <li><span class="muted small">Пресса</span> press@facemetric.example</li>
+        </ul>
+        <p class="muted small">
+          Не отправляйте медицинские документы и фото третьих лиц — мы их не обрабатываем.
+        </p>
+      </aside>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/contacts.js" defer></script>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Блог — {{ app_name }}{% endblock %}
+{% block description %}Статьи о метриках лица, уходе и том, как читать отчёт без иллюзий.{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <header class="page-head reveal">
+      <h1>Блог</h1>
+      <p class="muted">Разбираем метрики, уход и то, как читать отчёт без иллюзий.</p>
+    </header>
+
+    {% if articles %}
+      <div class="blog-grid">
+        {% for a in articles %}
+          <article class="blog-card card reveal">
+            <a class="blog-card-link" href="/blog/{{ a.slug }}"><h2>{{ a.title }}</h2></a>
+            {% if a.summary %}<p class="muted">{{ a.summary }}</p>{% endif %}
+            <footer class="blog-card-foot">
+              <time datetime="{{ a.published_at.isoformat() }}">{{ a.published_at.strftime('%d.%m.%Y') }}</time>
+              <span class="muted small">{{ a.views }} просмотров</span>
+            </footer>
+          </article>
+        {% endfor %}
+      </div>
+
+      {% if pages > 1 %}
+        <nav class="pager" aria-label="Страницы блога">
+          {% if page > 1 %}<a class="btn btn-ghost btn-sm" href="/blog?page={{ page - 1 }}">Назад</a>{% endif %}
+          <span class="muted small">Страница {{ page }} из {{ pages }}</span>
+          {% if page < pages %}<a class="btn btn-ghost btn-sm" href="/blog?page={{ page + 1 }}">Вперёд</a>{% endif %}
+        </nav>
+      {% endif %}
+    {% else %}
+      <p class="muted">Статей пока нет. Загляните позже.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

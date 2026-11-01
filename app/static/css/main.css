@@ -679,3 +679,78 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
 @media (min-width: 980px) {
   .admin-two { grid-template-columns: 1fr 1fr; align-items: start; }
 }
+
+/* ==========================================================================
+   Публичные страницы контента (этап 9): блог, метрики, о нас, контакты, право
+   ========================================================================== */
+.page-head { display: grid; gap: 8px; margin-bottom: 28px; max-width: 68ch; }
+.page-head h1 { margin: 0; }
+.narrow { max-width: 760px; }
+.center { text-align: center; }
+.center .hero-actions { justify-content: center; }
+.panel-title { margin: 28px 0 12px; font-size: 1.1rem; }
+.small { font-size: .82rem; }
+
+.blog-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.blog-card { display: grid; gap: 10px; align-content: start; padding: 20px; }
+.blog-card-link { text-decoration: none; color: inherit; }
+.blog-card-link h2 { margin: 0; font-size: 1.05rem; }
+.blog-card-link:hover h2 { color: var(--accent); }
+.blog-card-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 4px; }
+.pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 24px; }
+
+.article-head { margin-bottom: 20px; }
+.article-foot { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 28px; }
+.prose { line-height: 1.7; }
+.prose h2 { margin: 28px 0 10px; font-size: 1.2rem; }
+.prose h3 { margin: 22px 0 8px; font-size: 1.05rem; }
+.prose p { margin: 0 0 14px; }
+.prose ul, .prose ol { margin: 0 0 16px; padding-left: 22px; }
+.prose li { margin-bottom: 6px; }
+.prose blockquote {
+  margin: 0 0 16px; padding: 10px 16px; border-left: 3px solid var(--accent);
+  background: var(--surface-2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; color: var(--fg-muted);
+}
+.prose code {
+  padding: 2px 6px; border-radius: 4px; background: var(--surface-2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em;
+}
+.prose hr { border: 0; border-top: 1px solid var(--border); margin: 24px 0; }
+.prose a { color: var(--accent); }
+
+.metrics-group { margin-bottom: 8px; }
+.source-list { display: grid; gap: 8px; padding-left: 20px; color: var(--fg-muted); font-size: .88rem; }
+.disclaimer {
+  margin-top: 28px; padding: 14px 16px; border-radius: var(--radius);
+  border: 1px dashed var(--border); background: var(--surface-2); color: var(--fg-muted); font-size: .88rem;
+}
+
+.about-stats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin: 24px 0; }
+.about-stats .card { display: grid; gap: 4px; padding: 16px; text-align: center; }
+.about-stats span { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.about-stats small { color: var(--fg-muted); font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
+.principle-list { display: grid; gap: 10px; padding-left: 20px; }
+.principle-list li { line-height: 1.6; }
+
+.contact-grid { display: grid; gap: 16px; }
+.contact-grid .card { padding: 20px; }
+.contact-form { display: grid; gap: 12px; }
+.field { display: grid; gap: 6px; font-size: .86rem; color: var(--fg-muted); }
+.field input, .field textarea {
+  padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--fg); font: inherit; resize: vertical;
+}
+.field input:focus, .field textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.form-status { min-height: 1.2em; }
+.contact-list { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0 0 14px; }
+.contact-list li { display: grid; gap: 2px; }
+
+.faq-list { display: grid; gap: 12px; }
+.faq-item { padding: 14px 18px; }
+.faq-item summary { cursor: pointer; font-weight: 600; }
+.faq-item summary:hover { color: var(--accent); }
+.faq-item .prose { margin-top: 12px; }
+
+@media (min-width: 900px) {
+  .contact-grid { grid-template-columns: 1.3fr 1fr; align-items: start; }
+}

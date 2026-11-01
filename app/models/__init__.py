@@ -9,6 +9,7 @@ from app.models.content import (
     FaqItem,
     Feedback,
     MetricWeight,
+    PageView,
 )
 from app.models.exercise import (
     Achievement,
@@ -37,6 +38,7 @@ __all__ = [
     "LooksmaxPlan",
     "MetricValue",
     "MetricWeight",
+    "PageView",
     "PasswordResetToken",
     "Photo",
     "ProgressSnapshot",

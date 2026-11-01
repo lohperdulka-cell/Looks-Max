@@ -1,7 +1,8 @@
-"""Роутер HTML-страниц (Jinja2). Лендинг, вход, регистрация, восстановление пароля.
+"""Роутер HTML-страниц (Jinja2). Лендинг, вход, регистрация, публичный контент.
 
-Статические страницы контента (блог, о метриках, о нас, приватность, условия,
-контакты) добавляются на этапе 9.
+Страницы контента (блог, о метриках, о нас, приватность, условия, контакты,
+помощь) собираются здесь; данные берутся из БД и ml/constants, поэтому
+справочник метрик не расходится с моделью расчёта.
 """
 
 from __future__ import annotations
@@ -20,9 +21,14 @@ from app.db import SessionLocal
 from app.models.battle import Vote
 from app.models.report import Report
 from app.models.user import User
+from app.services import content as content_service
+from app.services import markdown_lite
 
 router = APIRouter(tags=["pages"])
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
+# Фильтры шаблонов: markdown для контента, текстовое превью для meta-описаний.
+templates.env.filters["markdown"] = markdown_lite.render
+templates.env.filters["plain"] = markdown_lite.plain_text
 
 # Замоканные отзывы — заменяются на реальные по мере наполнения.
 TESTIMONIALS: list[dict[str, str]] = [
@@ -191,3 +197,131 @@ async def admin_page(request: Request, user: OptionalUser) -> Response:
     if not user.is_admin:
         return RedirectResponse("/", status_code=302)
     return templates.TemplateResponse(request, "admin.html", _base_context(request, user))
+
+
+# --- Публичные страницы контента (этап 9) ------------------------------------
+
+
+def _static_context(request: Request, user: Any, **extra: Any) -> dict[str, Any]:
+    """Контекст статических страниц с подвалом и текущим годом."""
+    return _base_context(request, user, **extra)
+
+
+@router.get("/blog", response_class=HTMLResponse)
+async def blog_index(request: Request, user: OptionalUser, page: int = 1) -> HTMLResponse:
+    """Список статей блога с постраничной навигацией."""
+    per_page = 9
+    page = max(page, 1)
+    async with SessionLocal() as db:
+        items, total = await content_service.list_articles(
+            db, limit=per_page, offset=(page - 1) * per_page
+        )
+        articles = [
+            {
+                "slug": a.slug,
+                "title": a.title,
+                "summary": a.summary,
+                "published_at": a.published_at or a.created_at,
+                "views": a.views,
+            }
+            for a in items
+        ]
+    pages = max((total + per_page - 1) // per_page, 1)
+    return templates.TemplateResponse(
+        request,
+        "blog.html",
+        _static_context(
+            request,
+            user,
+            articles=articles,
+            page=page,
+            pages=pages,
+            total=total,
+        ),
+    )
+
+
+@router.get("/blog/{slug}", response_class=HTMLResponse)
+async def blog_article(request: Request, slug: str, user: OptionalUser) -> Response:
+    """Страница статьи с SEO-разметкой Article."""
+    import json
+
+    async with SessionLocal() as db:
+        article = await content_service.get_article_by_slug(db, slug)
+        if article is None or not article.is_published:
+            return templates.TemplateResponse(
+                request,
+                "404.html",
+                _static_context(request, user),
+                status_code=404,
+            )
+        await content_service.register_view(db, article)
+        json_ld = json.dumps(content_service.article_json_ld(article), ensure_ascii=False)
+        payload = {
+            "slug": article.slug,
+            "title": article.title,
+            "summary": article.summary,
+            "body_md": article.body_md,
+            "published_at": article.published_at or article.created_at,
+            "views": article.views,
+        }
+    return templates.TemplateResponse(
+        request,
+        "article.html",
+        _static_context(request, user, article=payload, json_ld=json_ld),
+    )
+
+
+@router.get("/metrics", response_class=HTMLResponse)
+async def metrics_page(request: Request, user: OptionalUser) -> HTMLResponse:
+    """Справочник метрик: эталоны, допуски, веса и источники."""
+    return templates.TemplateResponse(
+        request,
+        "metrics.html",
+        _static_context(
+            request,
+            user,
+            groups=content_service.metrics_by_category(),
+            sources=content_service.metric_source_groups(),
+            total=len(content_service.metrics_reference()),
+        ),
+    )
+
+
+@router.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request, user: OptionalUser) -> HTMLResponse:
+    """О платформе, команда и принципы."""
+    stats = await _platform_stats()
+    return templates.TemplateResponse(
+        request, "about.html", _static_context(request, user, stats=stats)
+    )
+
+
+@router.get("/contacts", response_class=HTMLResponse)
+async def contacts_page(request: Request, user: OptionalUser) -> HTMLResponse:
+    """Контакты и форма обратной связи."""
+    return templates.TemplateResponse(request, "contacts.html", _static_context(request, user))
+
+
+@router.get("/help", response_class=HTMLResponse)
+async def help_page(request: Request, user: OptionalUser) -> HTMLResponse:
+    """Помощь: FAQ из БД и базовые подсказки."""
+    async with SessionLocal() as db:
+        items = await content_service.list_faq(db)
+    faq = [
+        {"question": item.question, "answer_md": item.answer_md, "category": item.category}
+        for item in items
+    ]
+    return templates.TemplateResponse(request, "help.html", _static_context(request, user, faq=faq))
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request, user: OptionalUser) -> HTMLResponse:
+    """Политика конфиденциальности."""
+    return templates.TemplateResponse(request, "privacy.html", _static_context(request, user))
+
+
+@router.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request, user: OptionalUser) -> HTMLResponse:
+    """Пользовательское соглашение."""
+    return templates.TemplateResponse(request, "terms.html", _static_context(request, user))

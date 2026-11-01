@@ -97,3 +97,24 @@ class MetricWeight(TimestampMixin, Base):
     reference_value: Mapped[float | None] = mapped_column(Float, default=None)
     is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     note: Mapped[str | None] = mapped_column(Text, default=None)
+
+
+class PageView(Base):
+    """Просмотр публичной страницы (агрегируется в админке).
+
+    Пишется маячком из JS без персональных данных: путь, тип страницы,
+    необязательный id пользователя и referer-хост.
+    """
+
+    __tablename__ = "page_views"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    path: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), default="page", nullable=False)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None, index=True
+    )
+    referer_host: Mapped[str | None] = mapped_column(String(128), default=None)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), index=True, nullable=False
+    )

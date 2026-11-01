@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ article.title }} — {{ app_name }}{% endblock %}
+{% block description %}{{ article.summary | plain(160) if article.summary else article.body_md | plain(160) }}{% endblock %}
+{% block og_title %}{{ article.title }}{% endblock %}
+
+{% block head_extra %}
+  <script type="application/ld+json">{{ json_ld | safe }}</script>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container narrow">
+    <article class="article reveal">
+      <header class="article-head">
+        <h1>{{ article.title }}</h1>
+        <p class="muted small">
+          <time datetime="{{ article.published_at.isoformat() }}">{{ article.published_at.strftime('%d.%m.%Y') }}</time>
+          · {{ article.views }} просмотров
+        </p>
+      </header>
+      <div class="prose">{{ article.body_md | markdown | safe }}</div>
+      <footer class="article-foot">
+        <a class="btn btn-ghost btn-sm" href="/blog">← Все статьи</a>
+        <a class="btn btn-primary btn-sm" href="/rate">Оценить фото</a>
+      </footer>
+    </article>
+  </div>
+</section>
+{% endblock %}

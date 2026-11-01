@@ -14,6 +14,13 @@
   let chart = null;
   let loaded = {};
 
+  const KIND_LABELS = {
+    landing: 'лендинг',
+    article: 'статьи',
+    public_report: 'публичные отчёты',
+    page: 'прочие страницы',
+  };
+
   const statCard = (label, value, accent) => `
     <div class="admin-stat card ${accent ? 'is-accent' : ''}">
       <span>${value}</span><small>${label}</small>
@@ -231,6 +238,25 @@
       }));
   };
 
+  const loadAnalytics = async () => {
+    const days = Number($('[data-analytics-days]').value || 30);
+    const data = await api(`/api/admin/analytics?days=${days}`);
+    $('[data-analytics-total]').textContent = `Просмотров за период: ${data.total_views}`;
+    $('[data-analytics-stats]').innerHTML = data.by_kind.length
+      ? data.by_kind.map((k) => statCard(KIND_LABELS[k.kind] || k.kind, k.views)).join('')
+      : '<div class="muted small">Просмотров пока нет.</div>';
+
+    $('[data-analytics-pages]').innerHTML = data.top_pages.length
+      ? data.top_pages.map((p) => `
+        <tr><td>${escapeHtml(p.path)}</td><td>${p.views}</td></tr>`).join('')
+      : '<tr><td colspan="2" class="muted">Нет данных.</td></tr>';
+
+    $('[data-analytics-referers]').innerHTML = data.top_referers.length
+      ? data.top_referers.map((r) => `
+        <tr><td>${escapeHtml(r.host)}</td><td>${r.views}</td></tr>`).join('')
+      : '<tr><td colspan="2" class="muted">Внешних переходов нет.</td></tr>';
+  };
+
   const loadLogs = async () => {
     const [logs, errors] = await Promise.all([api('/api/admin/logs'), api('/api/admin/errors')]);
     $('[data-logs-body]').innerHTML = logs.length
@@ -261,6 +287,7 @@
     weights: loadWeights,
     feedback: loadFeedback,
     content: loadContent,
+    analytics: loadAnalytics,
     logs: loadLogs,
   };
 
@@ -285,6 +312,7 @@
   });
   $('[data-photos-public-only]').addEventListener('change', loadPhotos);
   $('[data-feedback-unread]').addEventListener('change', loadFeedback);
+  $('[data-analytics-days]').addEventListener('change', loadAnalytics);
 
   $('[data-weights-form]').addEventListener('submit', async (event) => {
     event.preventDefault();
