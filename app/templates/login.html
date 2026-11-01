@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Вход — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="container auth-card reveal">
+    <h1>Вход</h1>
+    <p class="muted">Логин и пароль. Никаких сторонних сервисов.</p>
+
+    <form class="form" data-auth-form data-mode="login" novalidate>
+      <label class="field">
+        <span>Логин</span>
+        <input type="text" name="username" autocomplete="username" required minlength="3" maxlength="32">
+      </label>
+      <label class="field">
+        <span>Пароль</span>
+        <input type="password" name="password" autocomplete="current-password" required minlength="8">
+      </label>
+
+      <div class="form-error" data-form-error role="alert" hidden></div>
+
+      <button class="btn btn-primary btn-block" type="submit">Войти</button>
+    </form>
+
+    <p class="auth-alt">
+      Нет аккаунта? <a href="/register">Зарегистрироваться</a>
+    </p>
+    <p class="auth-alt muted small">
+      Забыли пароль? <a href="/reset-password">Восстановить</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

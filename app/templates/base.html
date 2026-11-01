@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }} — объективная оценка внешности{% endblock %}</title>
+  <meta name="description" content="{% block description %}FaceMetric анализирует пропорции лица по фотографии: метрики, отчёт, прогресс. Математическая модель, а не истина.{% endblock %}">
+  <meta name="theme-color" content="#0b0f14">
+
+  {# Open Graph / Twitter #}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ app_name }}">
+  <meta property="og:title" content="{% block og_title %}{{ app_name }} — объективная оценка внешности{% endblock %}">
+  <meta property="og:description" content="Метрики пропорций лица, отчёт с графиками, прогресс и мобатлы.">
+  <meta property="og:url" content="{{ base_url }}{{ request.url.path if request else '/' }}">
+  <meta property="og:image" content="{{ base_url }}/static/img/og-cover.svg">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/main.css">
+  <link rel="canonical" href="{{ base_url }}{{ request.url.path if request else '/' }}">
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+  <a class="skip-link" href="#main">К основному содержимому</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="/" aria-label="{{ app_name }} — на главную">
+        <span class="brand-mark" aria-hidden="true">◈</span>
+        <span class="brand-name">{{ app_name }}</span>
+      </a>
+
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-nav"
+              data-nav-toggle aria-label="Открыть меню">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav id="primary-nav" class="primary-nav" aria-label="Основная навигация">
+        <a href="/#how">Как это работает</a>
+        <a href="/metrics">О метриках</a>
+        <a href="/blog">Блог</a>
+        <a href="/about">О нас</a>
+        <a href="/contacts">Контакты</a>
+        <div class="nav-auth" data-auth-slot>
+          <a class="btn btn-ghost" href="/login">Войти</a>
+          <a class="btn btn-primary" href="/register">Регистрация</a>
+        </div>
+      </nav>
+
+      <button class="theme-toggle" type="button" data-theme-toggle
+              aria-label="Переключить тему" title="Тема">
+        <span class="theme-icon" aria-hidden="true">◐</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="main" class="site-main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">◈</span>
+          <span class="brand-name">{{ app_name }}</span>
+        </div>
+        <p class="muted">Продукт студии <strong>VA digital studio</strong>. Математическая модель пропорций лица — не медицинское заключение.</p>
+      </div>
+      <nav aria-label="Продукт">
+        <h3>Продукт</h3>
+        <a href="/rate">Оценка</a>
+        <a href="/battles">Мобатлы</a>
+        <a href="/exercises">Упражнения</a>
+        <a href="/chat">ИИ-консультант</a>
+      </nav>
+      <nav aria-label="Компания">
+        <h3>Компания</h3>
+        <a href="/about">О нас</a>
+        <a href="/metrics">О метриках</a>
+        <a href="/blog">Блог</a>
+        <a href="/contacts">Контакты</a>
+      </nav>
+      <nav aria-label="Правовое">
+        <h3>Правовое</h3>
+        <a href="/privacy">Приватность</a>
+        <a href="/terms">Условия</a>
+        <a href="/help">Помощь</a>
+      </nav>
+    </div>
+    <div class="container footer-bottom">
+      <span class="muted">© {{ current_year }} VA digital studio. Все права защищены.</span>
+      <span class="muted">Дисклеймер: оценка субъективна по природе, модель лишь формализует пропорции.</span>
+    </div>
+  </footer>
+
+  <div class="toast-stack" data-toast-stack aria-live="polite" aria-atomic="false"></div>
+
+  <script src="/static/js/app.js" defer></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -11,27 +11,22 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from sqlalchemy import text
 
-from app.config import settings
+from app.config import BASE_DIR, settings
+from app.core.limiter import limiter
 from app.db import SessionLocal, engine
 from app.logging_config import configure_logging, get_logger
 
 configure_logging()
 logger = get_logger(__name__)
-
-limiter = Limiter(
-    key_func=get_remote_address,
-    default_limits=[settings.rate_limit_default] if settings.rate_limit_enabled else [],
-    enabled=settings.rate_limit_enabled,
-)
 
 
 @asynccontextmanager
@@ -89,9 +84,14 @@ def create_app() -> FastAPI:
 
     @application.exception_handler(RequestValidationError)
     async def validation_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        # exc.errors() может содержать несериализуемые объекты (например, ValueError
+        # в ctx), поэтому прогоняем через jsonable_encoder с fallback на str.
         return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"detail": "Ошибка валидации данных", "errors": exc.errors()},
+            status_code=422,
+            content={
+                "detail": "Ошибка валидации данных",
+                "errors": jsonable_encoder(exc.errors(), custom_encoder={Exception: str}),
+            },
         )
 
     @application.exception_handler(Exception)
@@ -132,11 +132,15 @@ def create_app() -> FastAPI:
             "version": "0.1.0",
         }
 
+    from app.api.auth import router as auth_router
+    from app.api.pages import router as pages_router
+
+    application.include_router(auth_router)
+    application.include_router(pages_router)
+
     # Статика (CSS/JS) подключается сразу; шаблоны — по мере этапов.
     application.mount(
-        "/static",
-        StaticFiles(directory=str(settings.media_root.parent.parent / "app" / "static")),
-        name="static",
+        "/static", StaticFiles(directory=str(BASE_DIR / "app" / "static")), name="static"
     )
 
     return application

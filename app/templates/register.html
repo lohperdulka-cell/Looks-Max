@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="container auth-card reveal">
+    <h1>Регистрация</h1>
+    <p class="muted">Нужен только логин и пароль.</p>
+
+    <form class="form" data-auth-form data-mode="register" novalidate>
+      <label class="field">
+        <span>Логин</span>
+        <input type="text" name="username" autocomplete="username" required minlength="3" maxlength="32"
+               pattern="[A-Za-z0-9_\-]+" title="Буквы, цифры, _ и -">
+        <small class="hint">3–32 символа: буквы, цифры, <code>_</code> и <code>-</code>.</small>
+      </label>
+      <label class="field">
+        <span>Пароль</span>
+        <input type="password" name="password" autocomplete="new-password" required minlength="8">
+        <small class="hint">Минимум 8 символов, буквы и цифры.</small>
+      </label>
+      <label class="field">
+        <span>Email <em class="muted">(необязательно)</em></span>
+        <input type="email" name="email" autocomplete="email">
+        <small class="hint">Нужен только для восстановления пароля.</small>
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" name="biometric_consent" required>
+        <span>
+          Я согласен(на) на обработку биометрических данных (фото лица) для расчёта
+          метрик. Данные можно удалить вместе с аккаунтом.
+        </span>
+      </label>
+
+      <div class="form-error" data-form-error role="alert" hidden></div>
+
+      <button class="btn btn-primary btn-block" type="submit">Создать аккаунт</button>
+    </form>
+
+    <p class="auth-alt">
+      Уже есть аккаунт? <a href="/login">Войти</a>
+    </p>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0f14"/><stop offset="1" stop-color="#141c26"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <ellipse cx="880" cy="300" rx="150" ry="195" fill="none" stroke="#4fd1c5" stroke-width="5" opacity=".85"/>
+  <path d="M730 300 Q880 250 1030 300" fill="none" stroke="#7c9cff" stroke-width="3" opacity=".7"/>
+  <text x="90" y="290" fill="#e8eef6" font-family="Inter,Arial" font-size="76" font-weight="700">FaceMetric</text>
+  <text x="90" y="356" fill="#97a6b8" font-family="Inter,Arial" font-size="34">Объективная оценка внешности по метрикам лица</text>
+  <text x="90" y="410" fill="#4fd1c5" font-family="Inter,Arial" font-size="27">VA digital studio</text>
+</svg>

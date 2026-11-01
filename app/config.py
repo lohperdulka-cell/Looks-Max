@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -49,7 +50,7 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = 7
     cookie_secure: bool = False  # в prod за HTTPS выставить True
     cookie_domain: str | None = None
-    cookie_samesite: str = "lax"
+    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
 
     # --- Rate limiting ---
     rate_limit_enabled: bool = True

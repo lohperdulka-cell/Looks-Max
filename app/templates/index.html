@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} — объективная оценка внешности по метрикам лица{% endblock %}
+{% block description %}Загрузите фото и получите отчёт по пропорциям лица: симметрия, трети, canthal tilt, jawline. Прогресс, мобатлы, ИИ-консультант.{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="container hero-inner">
+    <div class="hero-copy reveal">
+      <span class="eyebrow">looks-max · математическая модель пропорций</span>
+      <h1>Измерьте лицо. Отследите прогресс. Без иллюзий.</h1>
+      <p class="lead">
+        FaceMetric извлекает антропометрические точки лица, считает 17 метрик
+        (симметрия, canthal tilt, трети лица, jawline, диморфизм) и показывает,
+        где вы отклоняетесь от популяционных ориентиров — с источниками и
+        рекомендациями.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="/register">Начать бесплатно</a>
+        <a class="btn btn-ghost btn-lg" href="#how">Как это работает</a>
+      </div>
+      <p class="disclaimer muted">
+        Это не медицинское заключение и не истина о вашей внешности. Только математика пропорций.
+      </p>
+    </div>
+
+    <div class="hero-visual reveal" aria-hidden="true">
+      <div class="face-card">
+        <svg viewBox="0 0 220 260" class="face-svg" role="img">
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="var(--accent)" stop-opacity=".9"/>
+              <stop offset="1" stop-color="var(--accent-2)" stop-opacity=".5"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="110" cy="128" rx="74" ry="96" fill="none" stroke="url(#g1)" stroke-width="2"/>
+          <path d="M40 118 Q110 96 180 118" fill="none" stroke="var(--accent)" stroke-width="1.4" opacity=".8"/>
+          <path d="M52 74 Q110 56 168 74" fill="none" stroke="var(--accent)" stroke-width="1.4" opacity=".6"/>
+          <path d="M36 148 Q110 168 184 148" fill="none" stroke="var(--accent-2)" stroke-width="1.4" opacity=".6"/>
+          <circle cx="76" cy="118" r="4" fill="var(--accent)"/>
+          <circle cx="144" cy="118" r="4" fill="var(--accent)"/>
+          <path d="M96 118 L124 118" stroke="var(--accent)" stroke-width="1" stroke-dasharray="3 3" opacity=".7"/>
+          <path d="M110 40 L110 226" stroke="var(--fg-muted)" stroke-width="1" stroke-dasharray="4 6" opacity=".5"/>
+        </svg>
+        <div class="score-chip">
+          <span class="score-value" data-counter="{{ stats.avg_score or 7.4 }}" data-decimals="1">0.0</span>
+          <span class="score-label">средний балл</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="stats" aria-label="Показатели платформы">
+  <div class="container stats-grid">
+    <div class="stat reveal">
+      <span class="stat-value" data-counter="{{ stats.reports }}">0</span>
+      <span class="stat-label">оценок сделано</span>
+    </div>
+    <div class="stat reveal">
+      <span class="stat-value" data-counter="{{ stats.battles }}">0</span>
+      <span class="stat-label">голосов в батлах</span>
+    </div>
+    <div class="stat reveal">
+      <span class="stat-value" data-counter="{{ stats.users }}">0</span>
+      <span class="stat-label">пользователей</span>
+    </div>
+    <div class="stat reveal">
+      <span class="stat-value" data-counter="{{ stats.metrics }}">0</span>
+      <span class="stat-label">метрик в модели</span>
+    </div>
+  </div>
+</section>
+
+<section id="how" class="section">
+  <div class="container">
+    <h2 class="section-title reveal">Как это работает</h2>
+    <div class="steps">
+      <article class="step reveal">
+        <span class="step-num">1</span>
+        <h3>Загрузите фото</h3>
+        <p>Анфас, ровный свет, нейтральное выражение. Файл проверяется на формат и качество.</p>
+      </article>
+      <article class="step reveal">
+        <span class="step-num">2</span>
+        <h3>Модель находит точки</h3>
+        <p>InsightFace выделяет 106 landmark-точек лица; вы можете поправить их вручную на canvas.</p>
+      </article>
+      <article class="step reveal">
+        <span class="step-num">3</span>
+        <h3>Считаем метрики</h3>
+        <p>Симметрия, трети, пятые, canthal tilt, gonial angle и другие — с отклонением от эталона.</p>
+      </article>
+      <article class="step reveal">
+        <span class="step-num">4</span>
+        <h3>Получите отчёт</h3>
+        <p>Баллы по категориям, heatmap отклонений, сильные стороны, зоны роста и рекомендации.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title reveal">Что вы получите</h2>
+    <div class="features">
+      <article class="feature reveal">
+        <h3>17 метрик лица</h3>
+        <p>Каждая метрика — с эталоном, допуском и ссылкой на научный источник в отчёте.</p>
+      </article>
+      <article class="feature reveal">
+        <h3>Прогресс и «до/после»</h3>
+        <p>График по датам, сравнение двух отчётов, streak и достижения за регулярность.</p>
+      </article>
+      <article class="feature reveal">
+        <h3>Мобатлы с ELO</h3>
+        <p>Opt-in голосование, лидерборд, «батл недели». Анти-чит: нельзя голосовать за себя.</p>
+      </article>
+      <article class="feature reveal">
+        <h3>ИИ-консультант</h3>
+        <p>Персональный looksmax-план на 30 дней с учётом ваших слабых метрик. Без медицинских диагнозов.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container faq-wrap">
+    <h2 class="section-title reveal">Частые вопросы</h2>
+    <div class="faq" data-faq>
+      {% for item in faq %}
+      <details class="faq-item reveal">
+        <summary>{{ item.question }}</summary>
+        <div class="faq-answer">{{ item.answer_html | safe }}</div>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% if testimonials %}
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title reveal">Отзывы</h2>
+    <div class="testimonials">
+      {% for t in testimonials %}
+      <figure class="testimonial reveal">
+        <blockquote>{{ t.text }}</blockquote>
+        <figcaption>{{ t.author }}</figcaption>
+      </figure>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="cta">
+  <div class="container cta-inner reveal">
+    <h2>Готовы узнать свои метрики?</h2>
+    <p class="muted">Регистрация за 20 секунд. Нужен только логин и пароль.</p>
+    <a class="btn btn-primary btn-lg" href="/register">Создать аккаунт</a>
+  </div>
+</section>
+{% endblock %}
