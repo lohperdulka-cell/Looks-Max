@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Мобатлы — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <header class="page-head reveal">
+      <h1>Мобатлы</h1>
+      <p class="muted">
+        Два фото, один выбор. Голоса пересчитывают рейтинг ELO владельцев.
+        Сезон недели — отдельный зачёт по победам.
+      </p>
+    </header>
+
+    <div class="battle-layout">
+      <div class="battle-stage reveal" data-battle-stage>
+        <div class="battle-skeleton">
+          <div class="skeleton skeleton-block"></div>
+          <div class="skeleton skeleton-block"></div>
+        </div>
+      </div>
+
+      <aside class="battle-side reveal">
+        <article class="card">
+          <h2 class="panel-title" data-season-title>Батл недели</h2>
+          <p class="muted small" data-season-dates></p>
+          <div class="battle-stats">
+            <div class="battle-stat"><span data-total-votes>0</span><small>голосов</small></div>
+            <div class="battle-stat"><span data-my-elo>1200</span><small>мой ELO</small></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2 class="panel-title">Лидерборд</h2>
+            <button class="btn btn-ghost btn-sm" type="button" data-lb-scope="global">Глобальный</button>
+            <button class="btn btn-ghost btn-sm" type="button" data-lb-scope="season">Сезон</button>
+          </div>
+          <ol class="leaderboard" data-leaderboard></ol>
+        </article>
+
+        <p class="muted small">
+          Анти-чит: нельзя голосовать за своё фото, один голос на батл,
+          лимит 100 голосов в сутки.
+        </p>
+      </aside>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/battles.js" defer></script>
+{% endblock %}

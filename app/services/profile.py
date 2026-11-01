@@ -13,7 +13,7 @@ from datetime import UTC, date, datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.battle import Battle, Vote
+from app.models.battle import Vote
 from app.models.exercise import ExerciseCompletion, ProgressSnapshot
 from app.models.photo import Photo
 from app.models.report import Report
@@ -227,22 +227,7 @@ async def upsert_snapshot(db: AsyncSession, user: User, stats: ProfileStats) -> 
 
 
 async def battle_record(db: AsyncSession, user_id: int) -> tuple[int, int]:
-    """Счёт побед/поражений в батлах по фото пользователя."""
-    wins = (
-        await db.execute(
-            select(func.count())
-            .select_from(Battle)
-            .join(Photo, Photo.id == Battle.winner_photo_id)
-            .where(Photo.user_id == user_id)
-        )
-    ).scalar_one()
-    total = (
-        await db.execute(
-            select(func.count())
-            .select_from(Battle)
-            .join(Photo, Photo.id.in_([Battle.left_photo_id, Battle.right_photo_id]))
-            .where(Photo.user_id == user_id, Battle.winner_photo_id.is_not(None))
-        )
-    ).scalar_one()
-    losses = max(0, int(total) - int(wins))
-    return int(wins), losses
+    """Победы/поражения пользователя в завершённых батлах."""
+    from app.services.battles import win_loss
+
+    return await win_loss(db, user_id)
