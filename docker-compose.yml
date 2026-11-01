@@ -17,7 +17,11 @@ services:
       retries: 5
 
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # mp — MediaPipe (≈240 МБ RSS). full — + InsightFace и PDF.
+        INSTALL_EXTRAS: ${INSTALL_EXTRAS:-mp}
     restart: unless-stopped
     depends_on:
       db:
@@ -29,6 +33,8 @@ services:
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       JWT_SECRET: ${JWT_SECRET:-change-me-jwt-secret}
       ML_ENABLED: ${ML_ENABLED:-true}
+      ML_PROVIDER_PRIMARY: ${ML_PROVIDER_PRIMARY:-mediapipe}
+      ML_PROVIDER_FALLBACK: ${ML_PROVIDER_FALLBACK:-demo}
       LLM_ENABLED: ${LLM_ENABLED:-false}
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
@@ -39,7 +45,7 @@ services:
       - "8000:8000"
     command: >
       sh -c "alembic upgrade head &&
-             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1"
 
 volumes:
   pgdata:

@@ -4,15 +4,21 @@
 # Профиль сборки задаётся ARG INSTALL_EXTRAS:
 #   core — веб-приложение + numpy/OpenCV (они в ядре). Демо-провайдер считает
 #          метрики по синтетической сетке, поэтому конвейер работает целиком.
-#   full — + PDF (weasyprint). Провайдеры InsightFace/MediaPipe подключаются
-#          отдельно через extras [ml].
+#   mp   — + MediaPipe: реальные измерения, ≈240 МБ RSS. Влезает в 512 МБ
+#          Render free. Рекомендуется для деплоя.
+#   full — + MediaPipe, InsightFace и PDF (weasyprint). InsightFace качает
+#          280 МБ весов и грузит их в память; на free не влезает.
 #
-# Render free даёт 512 МБ RAM: InsightFace (onnxruntime + buffalo_l) и
-# MediaPipe в этот лимит не влезают, поэтому на free собирайте core и
-# оставляйте демо-провайдер (ML_PROVIDER_DEMO=true).
+# Render free даёт 512 МБ RAM. Замеры пика RSS: MediaPipe — 237 МБ,
+# InsightFace с обрезкой до трёх моделей — 274 МБ, полный buffalo_l — 920 МБ
+# (OOM-kill). Поэтому на free собирайте mp (или core для демо-режима).
+#
+# Дефолт — mp: Render Blueprint не умеет передавать build args, поэтому образ
+# на Render собирается с этим значением. Локально профиль переопределяется
+# через `--build-arg INSTALL_EXTRAS=...` или docker-compose.
 FROM python:3.12-slim AS base
 
-ARG INSTALL_EXTRAS=core
+ARG INSTALL_EXTRAS=mp
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -34,7 +40,11 @@ WORKDIR /app
 # Сначала зависимости — кэшируем слой.
 COPY pyproject.toml README.md ./
 RUN pip install --upgrade pip \
-    && if [ "$INSTALL_EXTRAS" = "full" ]; then pip install ".[ml,pdf]"; else pip install .; fi
+    && case "$INSTALL_EXTRAS" in \
+         full) pip install ".[ml,pdf]" ;; \
+         mp)   pip install ".[mp]" ;; \
+         *)    pip install . ;; \
+       esac
 
 COPY . .
 

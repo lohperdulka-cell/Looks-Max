@@ -29,16 +29,19 @@ services:
         generateValue: true
       - key: COOKIE_SECURE
         value: "true"
-      # Render free: 512 МБ RAM — детекторы лица (InsightFace/MediaPipe) не
-      # влезают. Включаем демо-провайдер: конвейер работает целиком, но баллы
-      # синтетические. Для реальных измерений переведите сервис на платный план,
-      # соберите образ с INSTALL_EXTRAS=full и верните ML_ENABLED=true.
+      # Render free: 512 МБ RAM. Замеры пика RSS: MediaPipe — 237 МБ (влезает),
+      # InsightFace с обрезкой до трёх моделей — 274 МБ, полный buffalo_l —
+      # 920 МБ (OOM-kill). Поэтому на free собираем профиль mp и оставляем
+      # MediaPipe основным: измерения реальные, пол берётся из профиля
+      # (MediaPipe его не отдаёт). Для InsightFace переходите на платный план.
       - key: ML_ENABLED
         value: "true"
       - key: ML_PROVIDER_PRIMARY
-        value: demo
+        value: mediapipe
       - key: ML_PROVIDER_FALLBACK
         value: demo
+      - key: ML_INSIGHTFACE_MODULES
+        value: detection,landmark_2d_106,genderage
       - key: ML_PROVIDER_DEMO
         value: "true"
       - key: LLM_ENABLED

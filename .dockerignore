@@ -1,0 +1,43 @@
+# Без этого файла в образ попадали локальные .venv (1.3 ГБ), data (606 МБ,
+# включая скачанные веса моделей) и .git — образ раздувался до 3.99 ГБ.
+.git
+.gitignore
+.github
+
+# Виртуальные окружения и кэши Python
+.venv
+venv
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+.mypy_cache
+.ruff_cache
+htmlcov
+.coverage
+.coverage.*
+coverage.xml
+
+# Локальные данные и секреты
+.env
+.env.*
+!.env.example
+data/media
+data/models
+*.db
+*.sqlite3
+
+# Тесты, документация и инструменты разработки
+tests
+docs
+*.md
+!README.md
+Makefile
+docker-compose*.yml
+render.yaml
+.pre-commit-config.yaml
+
+# Прочее
+.DS_Store
+*.log
+.agent_tmp

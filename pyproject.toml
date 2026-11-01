@@ -45,6 +45,11 @@ ml = [
     "mediapipe>=0.10.18",
     "scikit-learn>=1.5",
 ]
+# Только MediaPipe: ≈240 МБ RSS, влезает в 512 МБ Render free (реальные
+# измерения без скачивания 280 МБ весов InsightFace).
+mp = [
+    "mediapipe>=0.10.18",
+]
 # Экспорт отчётов в PDF.
 pdf = ["weasyprint>=62.3"]
 # ИИ-консультант с внешним LLM (OpenAI-совместимый API).

@@ -393,3 +393,71 @@ def test_public_report_includes_recommendations(monkeypatch):
     from app.schemas.reports import PublicReportOut
 
     assert "recommendations" in PublicReportOut.model_fields
+
+
+# --- Память: обрезка моделей InsightFace -------------------------------------
+#
+# Полный buffalo_l (5 моделей) даёт пик ~920 МБ RSS и OOM-kill при лимите
+# 512 МБ (Render free). Коду нужны три модели; allowed_modules не помогает,
+# потому что InsightFace создаёт ONNX-сессию до фильтра — файлы надо убирать
+# физически, что и делает _pruned_buffalo_dir.
+
+
+def test_pruned_dir_keeps_only_configured_models(tmp_path, monkeypatch):
+    """В обрезанном каталоге только модели из ml_insightface_modules."""
+    monkeypatch.setattr(lm_module.settings, "ml_model_dir", tmp_path)
+    source = tmp_path / "models" / "buffalo_l"
+    source.mkdir(parents=True)
+    for name in lm_module._IF_TASK_BY_FILE:
+        (source / name).write_bytes(b"stub")
+
+    pruned = lm_module._pruned_buffalo_dir()
+
+    kept = {p.name for p in pruned.glob("*.onnx")}
+    assert kept == {"det_10g.onnx", "2d106det.onnx", "genderage.onnx"}
+    # Тяжёлые и неиспользуемые модели не должны попасть в обрезанный каталог.
+    assert "1k3d68.onnx" not in kept
+    assert "w600k_r50.onnx" not in kept
+
+
+def test_pruned_dir_respects_custom_module_list(tmp_path, monkeypatch):
+    """Набор моделей управляется настройкой: убрали genderage — нет файла."""
+    monkeypatch.setattr(lm_module.settings, "ml_model_dir", tmp_path)
+    monkeypatch.setattr(
+        lm_module.settings, "ml_insightface_modules", ("detection", "landmark_2d_106")
+    )
+    source = tmp_path / "models" / "buffalo_l"
+    source.mkdir(parents=True)
+    for name in lm_module._IF_TASK_BY_FILE:
+        (source / name).write_bytes(b"stub")
+
+    pruned = lm_module._pruned_buffalo_dir()
+
+    kept = {p.name for p in pruned.glob("*.onnx")}
+    assert kept == {"det_10g.onnx", "2d106det.onnx"}
+
+
+def test_pruned_dir_drops_stale_files(tmp_path, monkeypatch):
+    """Сужение набора удаляет ранее подготовленные лишние модели."""
+    monkeypatch.setattr(lm_module.settings, "ml_model_dir", tmp_path)
+    source = tmp_path / "models" / "buffalo_l"
+    source.mkdir(parents=True)
+    for name in lm_module._IF_TASK_BY_FILE:
+        (source / name).write_bytes(b"stub")
+    pruned = tmp_path / "models" / "buffalo_l_pruned"
+    pruned.mkdir(parents=True)
+    (pruned / "1k3d68.onnx").write_bytes(b"stale")
+
+    lm_module._pruned_buffalo_dir()
+
+    assert not (pruned / "1k3d68.onnx").exists()
+
+
+def test_default_provider_is_mediapipe():
+    """MediaPipe по умолчанию: ≈240 МБ RSS против 920 МБ у полного InsightFace."""
+    from app.config import Settings
+
+    defaults = Settings(_env_file=None)
+    assert defaults.ml_provider_primary == "mediapipe"
+    assert "landmark_2d_106" in defaults.ml_insightface_modules
+    assert "recognition" not in defaults.ml_insightface_modules

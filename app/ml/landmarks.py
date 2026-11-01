@@ -55,6 +55,16 @@ _mediapipe_mesh: Any | None = None
 _insightface_failed = False
 _mediapipe_failed = False
 
+# Соответствие файлов buffalo_l задачам InsightFace. Нужно, чтобы физически
+# оставить только требуемые модели: полный набор даёт пик ~920 МБ RSS.
+_IF_TASK_BY_FILE = {
+    "det_10g.onnx": "detection",
+    "2d106det.onnx": "landmark_2d_106",
+    "genderage.onnx": "genderage",
+    "1k3d68.onnx": "landmark_3d_68",
+    "w600k_r50.onnx": "recognition",
+}
+
 
 @dataclass(slots=True)
 class FaceLandmarks:
@@ -72,6 +82,54 @@ class LandmarkError(RuntimeError):
     """Не удалось извлечь landmarks (лицо не найдено или провайдеры недоступны)."""
 
 
+def _pruned_buffalo_dir() -> Path:
+    """Каталог buffalo_l только с нужными моделями (симлинки на оригинал).
+
+    InsightFace при загрузке создаёт ONNX-сессию для каждого .onnx до проверки
+    `allowed_modules`, поэтому лишние 300 МБ весов всё равно поднимают пик RSS.
+    Оставляем только модели из `settings.ml_insightface_modules`, подсовывая
+    FaceAnalysis отдельный каталог: он делает glob по нему и грузит ровно то,
+    что нужно.
+    """
+    source = settings.ml_model_dir / "models" / "buffalo_l"
+    keep = {f for f, task in _IF_TASK_BY_FILE.items() if task in settings.ml_insightface_modules}
+    pruned = settings.ml_model_dir / "models" / "buffalo_l_pruned"
+    pruned.mkdir(parents=True, exist_ok=True)
+
+    for name in keep:
+        src = source / name
+        if not src.exists():
+            continue
+        dst = pruned / name
+        if dst.exists():
+            continue
+        try:
+            dst.symlink_to(src.resolve())
+        except OSError:
+            # Файловая система без симлинков — копируем (вес этих трёх моделей мал).
+            import shutil
+
+            shutil.copy2(src, dst)
+
+    # Убираем ранее скопированные лишние файлы, если набор сузили.
+    for existing in pruned.glob("*.onnx"):
+        if existing.name not in keep:
+            existing.unlink(missing_ok=True)
+
+    return pruned
+
+
+def _ensure_buffalo_files() -> None:
+    """Скачивает и распаковывает buffalo_l, НЕ создавая ONNX-сессии.
+
+    Именно из-за создания сессий полный набор моделей даёт пик ~920 МБ, поэтому
+    здесь только подготовка файлов на диске (`ensure_available` = download).
+    """
+    from insightface.utils import ensure_available
+
+    ensure_available("models", "buffalo_l", root=str(settings.ml_model_dir))
+
+
 def _load_insightface() -> Any | None:
     """Ленивая загрузка InsightFace FaceAnalysis с кэшем в памяти."""
     global _insightface_app, _insightface_failed
@@ -84,14 +142,20 @@ def _load_insightface() -> Any | None:
             from insightface.app import FaceAnalysis
 
             settings.ml_model_dir.mkdir(parents=True, exist_ok=True)
+            _ensure_buffalo_files()
+            model_dir = _pruned_buffalo_dir()
             app = FaceAnalysis(
-                name="buffalo_l",
-                root=str(settings.ml_model_dir),
+                name=str(model_dir),
                 providers=["CPUExecutionProvider"],
+                allowed_modules=list(settings.ml_insightface_modules),
             )
             app.prepare(ctx_id=-1, det_size=(640, 640))
             _insightface_app = app
-            logger.info("ml.insightface.loaded", root=str(settings.ml_model_dir))
+            logger.info(
+                "ml.insightface.loaded",
+                root=str(model_dir),
+                modules=",".join(sorted(app.models)),
+            )
         except Exception as exc:
             _insightface_failed = True
             logger.warning("ml.insightface.unavailable", error=str(exc))

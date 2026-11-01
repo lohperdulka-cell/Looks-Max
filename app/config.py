@@ -64,8 +64,21 @@ class Settings(BaseSettings):
 
     # --- ML ---
     ml_enabled: bool = True
-    ml_provider_primary: str = "insightface"
-    ml_provider_fallback: str = "mediapipe"
+    # MediaPipe основной: не тянет 280 МБ весов из сети, ~240 МБ RSS и 478
+    # точек вместо 106. InsightFace — резерв (точнее по антропометрии и даёт
+    # пол/возраст), но требует обрезки моделей, см. ml_insightface_modules.
+    ml_provider_primary: str = "mediapipe"
+    ml_provider_fallback: str = "insightface"
+    # Какие модели buffalo_l реально грузить. Полный набор — 5 моделей и пик
+    # ~920 МБ RSS (OOM на 512 МБ). Коду нужны только эти три: детектор, 106
+    # точек и пол/возраст. 1k3d68 (137 МБ) и w600k_r50 (166 МБ) не используются
+    # и именно они дают скачок памяти при создании ONNX-сессий.
+    # allowed_modules у InsightFace НЕ помогает: сессия создаётся до фильтра.
+    ml_insightface_modules: tuple[str, ...] = (
+        "detection",
+        "landmark_2d_106",
+        "genderage",
+    )
     # Демо-провайдер (синтетическая сетка лица) — последний резерв для деплоя
     # без InsightFace/MediaPipe. Не измеряет реальное лицо: только проверка
     # работоспособности конвейера. Помечается флагом is_demo в ответах.
