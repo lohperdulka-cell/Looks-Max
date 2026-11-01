@@ -7,9 +7,14 @@ WeasyPrint импортируется лениво: тяжёлая систем�
 from __future__ import annotations
 
 from app.logging_config import get_logger
-from app.schemas.reports import ReportOut
+from app.schemas.reports import MetricOut, ReportOut
 
 logger = get_logger(__name__)
+
+# Градиент «плохо → хорошо» для шкал метрик. Совпадает с веб-версией.
+GAUGE_GRADIENT = (
+    "linear-gradient(90deg, #dc2626 0%, #ea580c 28%, #eab308 50%, #65a30d 74%, #16a34a 100%)"
+)
 
 
 def _score_color(score: float) -> str:
@@ -20,30 +25,69 @@ def _score_color(score: float) -> str:
     return "#dc2626"
 
 
-def render_report_html(report: ReportOut, username: str = "") -> str:
-    """Собирает печатную HTML-версию отчёта (общая для PDF и предпросмотра)."""
-    rows = "".join(
-        f"""
-        <tr>
-          <td>{m.label}</td>
-          <td>{m.category_label}</td>
-          <td>{"—" if m.raw_value is None else round(m.raw_value, 3)} {m.unit}</td>
-          <td style="color:{_score_color(m.score)};font-weight:600">{m.score:.1f}</td>
-        </tr>"""
-        for m in sorted(report.metrics, key=lambda x: x.score, reverse=True)
-    )
+def _fmt(value: float | None, digits: int = 2) -> str:
+    return "—" if value is None else f"{value:.{digits}f}"
 
-    categories = "".join(
+
+def _gauge(score: float) -> str:
+    """Полоса-градиент с маркером на позиции балла (0..10 → 0..100 %)."""
+    pct = max(0.0, min(100.0, score * 10))
+    return f'<div class="gauge"><span class="gauge-marker" style="left:{pct:.1f}%"></span></div>'
+
+
+def _metric_block(m: MetricOut) -> str:
+    """Карточка метрики: шкала, значение, эталон и пояснение."""
+    unit = f" {m.unit}" if m.unit else ""
+    deviation = ""
+    if m.deviation is not None and m.reference_value is not None:
+        sign = "+" if m.deviation > 0 else ""
+        deviation = f" · отклонение {sign}{m.deviation:.2f}"
+    notes = f'<p class="m-note">{m.notes}</p>' if m.notes else ""
+    source = f'<p class="m-src">Источник: {m.source}</p>' if m.source else ""
+    return f"""
+      <div class="metric">
+        <div class="m-head">
+          <span class="m-label">{m.label}</span>
+          <span class="m-cat">{m.category_label}</span>
+          <span class="m-score" style="color:{_score_color(m.score)}">{m.score:.1f}</span>
+        </div>
+        {_gauge(m.score)}
+        <p class="m-values">Ваше значение: {_fmt(m.raw_value)}{unit}
+           · эталон: {_fmt(m.reference_value)}{deviation}</p>
+        {notes}
+        {source}
+      </div>"""
+
+
+def _category_block(report: ReportOut) -> str:
+    """Категории с полосами-градиентами."""
+    return "".join(
         f"""
         <div class="cat">
-          <span>{c.label}</span>
-          <span class="cat-score" style="color:{_score_color(c.score)}">{c.score:.1f}</span>
+          <div class="cat-head"><span>{c.label}</span>
+            <span style="color:{_score_color(c.score)}">{c.score:.1f}</span></div>
+          {_gauge(c.score)}
+          <p class="cat-sub">{c.metrics_count} метрик · вес {c.weight:.2f}</p>
         </div>"""
         for c in report.categories_detail
     )
 
-    strengths = "".join(f"<li>{m.label} — {m.score:.1f}</li>" for m in report.strengths)
-    growth = "".join(f"<li>{m.label} — {m.score:.1f}</li>" for m in report.growth)
+
+def render_report_html(report: ReportOut, username: str = "") -> str:
+    """Собирает печатную HTML-версию отчёта (общая для PDF и предпросмотра)."""
+    metrics_sorted = sorted(report.metrics, key=lambda x: x.score, reverse=True)
+    metrics_html = "".join(_metric_block(m) for m in metrics_sorted)
+
+    categories = _category_block(report)
+
+    strengths = "".join(
+        f'<li>{m.label} — <strong style="color:{_score_color(m.score)}">{m.score:.1f}</strong></li>'
+        for m in report.strengths
+    )
+    growth = "".join(
+        f'<li>{m.label} — <strong style="color:{_score_color(m.score)}">{m.score:.1f}</strong></li>'
+        for m in report.growth
+    )
 
     recommendations = "".join(
         f"""
@@ -62,24 +106,44 @@ def render_report_html(report: ReportOut, username: str = "") -> str:
 <meta charset="utf-8">
 <title>FaceMetric — отчёт #{report.id}</title>
 <style>
-  @page {{ size: A4; margin: 18mm 14mm; }}
-  body {{ font-family: "DejaVu Sans", sans-serif; color: #1f2430; font-size: 11px; }}
+  @page {{ size: A4; margin: 16mm 13mm; }}
+  body {{ font-family: "DejaVu Sans", sans-serif; color: #1f2430; font-size: 10.5px; }}
   h1 {{ font-size: 20px; margin: 0 0 4px; }}
-  h2 {{ font-size: 14px; margin: 18px 0 8px;
+  h2 {{ font-size: 13.5px; margin: 18px 0 8px;
         border-bottom: 1px solid #e2e6ee; padding-bottom: 4px; }}
-  h4 {{ font-size: 12px; margin: 0 0 4px; }}
+  h4 {{ font-size: 11.5px; margin: 0 0 4px; }}
   .muted {{ color: #6b7280; }}
   .hero {{ display: flex; gap: 24px; align-items: center; margin-bottom: 12px; }}
   .overall {{ font-size: 40px; font-weight: 700; }}
+
+  /* Шкала-градиент: полоса «плохо → хорошо» с маркером значения. */
+  .gauge {{ position: relative; height: 9px; border-radius: 999px;
+            background: {GAUGE_GRADIENT}; margin: 5px 0 3px; }}
+  .gauge-marker {{ position: absolute; top: -3px; width: 3px; height: 15px;
+                   margin-left: -1.5px; border-radius: 2px; background: #1f2430; }}
+
   .cats {{ display: flex; flex-wrap: wrap; gap: 8px; }}
-  .cat {{ border: 1px solid #e2e6ee; border-radius: 8px; padding: 6px 10px; min-width: 120px; }}
-  .cat-score {{ float: right; font-weight: 700; }}
-  table {{ width: 100%; border-collapse: collapse; margin-top: 6px; }}
-  th, td {{ text-align: left; padding: 5px 6px; border-bottom: 1px solid #eef1f6; }}
-  th {{ background: #f6f8fb; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }}
+  .cat {{ border: 1px solid #e2e6ee; border-radius: 8px; padding: 7px 10px;
+          width: 31%; box-sizing: border-box; }}
+  .cat-head {{ display: flex; justify-content: space-between; font-weight: 600; }}
+  .cat-sub {{ margin: 2px 0 0; color: #6b7280; font-size: 9px; }}
+
+  .metrics {{ display: flex; flex-wrap: wrap; gap: 8px; }}
+  .metric {{ border: 1px solid #e2e6ee; border-radius: 8px; padding: 8px 10px;
+             width: 48%; box-sizing: border-box; }}
+  .m-head {{ display: flex; align-items: baseline; gap: 6px; }}
+  .m-label {{ font-weight: 600; }}
+  .m-cat {{ color: #6b7280; font-size: 8.5px; text-transform: uppercase;
+            letter-spacing: .04em; margin-left: auto; }}
+  .m-score {{ font-weight: 700; }}
+  .m-values {{ margin: 0; font-size: 9px; color: #4b5563; }}
+  .m-note {{ margin: 3px 0 0; font-size: 8.5px; color: #6b7280; }}
+  .m-src {{ margin: 2px 0 0; font-size: 8px; color: #9aa3b2; }}
+
   .cols {{ display: flex; gap: 20px; }}
   .cols > div {{ flex: 1; }}
-  .rec {{ border: 1px solid #e2e6ee; border-radius: 8px; padding: 10px; margin-bottom: 8px; }}
+  .rec {{ border: 1px solid #e2e6ee; border-radius: 8px; padding: 10px; margin-bottom: 8px;
+          break-inside: avoid; }}
   .rec ul {{ margin: 4px 0 0 16px; padding: 0; }}
   .src {{ color: #6b7280; font-size: 9px; margin: 6px 0 0; }}
   .disclaimer {{ margin-top: 16px; padding: 10px; background: #f6f8fb; border-radius: 8px;
@@ -109,11 +173,8 @@ def render_report_html(report: ReportOut, username: str = "") -> str:
     <div><h2>Зоны роста</h2><ul>{growth}</ul></div>
   </div>
 
-  <h2>Все метрики</h2>
-  <table>
-    <thead><tr><th>Метрика</th><th>Категория</th><th>Значение</th><th>Балл</th></tr></thead>
-    <tbody>{rows}</tbody>
-  </table>
+  <h2>Метрики: шкалы и пояснения</h2>
+  <div class="metrics">{metrics_html}</div>
 
   <h2>Рекомендации</h2>
   {recommendations or '<p class="muted">Явных зон роста не выявлено.</p>'}

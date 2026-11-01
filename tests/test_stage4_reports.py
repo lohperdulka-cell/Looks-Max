@@ -142,6 +142,18 @@ async def test_export_html(client: AsyncClient, seeded_photo: int) -> None:
     assert "Рекомендации" in resp.text
 
 
+async def test_export_html_has_metric_gauges(client: AsyncClient, seeded_photo: int) -> None:
+    """Печатная версия должна повторять веб: шкала на каждую метрику и категорию."""
+    report_id = (await client.post(f"/api/reports?photo_id={seeded_photo}")).json()["id"]
+    resp = await client.get(f"/api/reports/{report_id}/export/html")
+    assert resp.status_code == 200
+    html = resp.text
+    assert "linear-gradient" in html
+    # Маркер значения рисуется по одному на метрику и на категорию.
+    assert html.count("gauge-marker") >= 2
+    assert "эталон:" in html
+
+
 async def test_export_pdf_or_503(client: AsyncClient, seeded_photo: int) -> None:
     report_id = (await client.post(f"/api/reports?photo_id={seeded_photo}")).json()["id"]
     resp = await client.get(f"/api/reports/{report_id}/export/pdf")
