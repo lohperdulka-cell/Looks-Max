@@ -90,8 +90,38 @@
         <div class="table-wrap">
           <table class="data-table" data-metrics-table>
             <thead>
-              <tr><th>Метрика</th><th>Категория</th><th>Значение</th><th>Эталон</th><th>Балл</th></tr>
+              <tr>
+                <th>Метрика</th><th>Категория</th><th>Значение</th><th>Эталон</th>
+                <th>Отклонение</th><th>Допуск</th><th>z</th><th>Балл</th>
+              </tr>
             </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="card reveal" data-computation-card hidden>
+        <h2 class="panel-title">Как посчитан итог</h2>
+        <p class="muted small" data-computation-formula></p>
+        <div class="table-wrap">
+          <table class="data-table" data-contributions-table>
+            <thead>
+              <tr>
+                <th>Категория</th><th>Балл</th><th>Вес</th>
+                <th>Вклад (балл × вес)</th><th>Доля</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <h3 class="sub-title">Переменные расчёта</h3>
+        <p class="muted small">
+          Промежуточные величины, из которых собраны метрики. Все длины
+          нормированы на ширину или высоту лица.
+        </p>
+        <div class="table-wrap">
+          <table class="data-table" data-variables-table>
+            <thead><tr><th>Переменная</th><th>Обозначение</th><th>Значение</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>

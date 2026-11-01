@@ -28,6 +28,8 @@ from dataclasses import dataclass, field
 from app.ml.constants import (
     CATEGORY_LABELS,
     CATEGORY_WEIGHTS,
+    METRIC_BY_KEY,
+    METRIC_FORMULAS,
     METRIC_SPECS,
     MetricCategory,
     MetricSpec,
@@ -56,6 +58,10 @@ class MetricScore:
     unit: str = ""
     source: str = ""
     notes: str = ""
+    # Прозрачность расчёта: допуск, формула и нормированное отклонение.
+    tolerance: float = 0.0
+    formula: str = ""
+    z_score: float = 0.0
 
 
 @dataclass(slots=True)
@@ -68,6 +74,10 @@ class ScoreResult:
     harmony: float = 0.0
     missing: list[str] = field(default_factory=list)
     model_version: str = "1.0.0"
+    # Промежуточные величины геометрии (ширина лица, трети, ipd и т.д.).
+    auxiliary: dict[str, float] = field(default_factory=dict)
+    # Взвешенный вклад каждой категории в общий балл.
+    category_contributions: dict[str, float] = field(default_factory=dict)
 
 
 def _resolve_reference(spec: MetricSpec, gender: str | None, override: float | None) -> float:
@@ -117,7 +127,7 @@ def score_metrics(
     weight_overrides = weight_overrides or {}
     enabled = enabled or {}
 
-    result = ScoreResult()
+    result = ScoreResult(auxiliary=dict(raw.auxiliary))
     scored: list[MetricScore] = []
 
     for spec in METRIC_SPECS:
@@ -149,6 +159,9 @@ def score_metrics(
                 unit=spec.unit,
                 source=spec.source,
                 notes=spec.notes,
+                tolerance=spec.tolerance,
+                formula=METRIC_FORMULAS.get(spec.key, ""),
+                z_score=abs(deviation) / spec.tolerance if spec.tolerance > 0 else 0.0,
             )
         )
 
@@ -173,6 +186,8 @@ def score_metrics(
         w = CATEGORY_WEIGHTS.get(cat_enum, 0.0)
         overall_acc += cat_score * w
         used_weight += w
+        # Вклад категории в общий балл: видно, какая тянет итог вверх или вниз.
+        result.category_contributions[cat_value] = round(cat_score * w, 4)
     result.overall = round(overall_acc / used_weight, 2) if used_weight > 0 else 0.0
 
     # --- Гармония: согласованность оценок. Чем меньше разброс, тем выше.
@@ -187,6 +202,7 @@ def score_metrics(
         harmony_score = result.overall
 
     result.harmony = round(harmony_score, 2)
+    harmony_spec = METRIC_BY_KEY["harmony"]
     scored.append(
         MetricScore(
             key="harmony",
@@ -199,6 +215,9 @@ def score_metrics(
             weight=weight_overrides.get("harmony", 1.5),
             unit="композит",
             source="[5] — композитная согласованность пропорций",
+            notes=harmony_spec.notes,
+            tolerance=harmony_spec.tolerance,
+            formula=METRIC_FORMULAS["harmony"],
         )
     )
     result.categories[MetricCategory.HARMONY.value] = round(harmony_score, 2)
@@ -206,6 +225,7 @@ def score_metrics(
     # Пересчитываем общий балл с учётом гармонии как отдельной категории.
     used_weight = 0.0
     overall_acc = 0.0
+    result.category_contributions = {}
     for cat_value, cat_score in result.categories.items():
         try:
             cat_enum = MetricCategory(cat_value)
@@ -214,6 +234,7 @@ def score_metrics(
         w = CATEGORY_WEIGHTS.get(cat_enum, 0.0)
         overall_acc += cat_score * w
         used_weight += w
+        result.category_contributions[cat_value] = round(cat_score * w, 4)
     result.overall = round(overall_acc / used_weight, 2) if used_weight > 0 else 0.0
 
     result.metrics = scored

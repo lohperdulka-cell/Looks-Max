@@ -20,7 +20,10 @@ from app.ml.constants import (
     CATEGORY_WEIGHTS,
     DEMO_DISCLAIMER,
     DISCLAIMER,
+    METRIC_BY_KEY,
+    METRIC_FORMULAS,
     MODEL_VERSION,
+    VARIABLE_LABELS,
     MetricCategory,
 )
 from app.ml.landmarks import FaceLandmarks
@@ -32,11 +35,14 @@ from app.models.photo import Photo
 from app.models.report import MetricValue, Report
 from app.models.user import User
 from app.schemas.reports import (
+    CategoryContributionOut,
     CategoryOut,
+    ComputationOut,
     MetricOut,
     RecommendationOut,
     ReportOut,
     ReportSummary,
+    VariableOut,
 )
 
 MAX_RECOMMENDATIONS = 6
@@ -137,6 +143,14 @@ async def create_report(
             "missing": result.missing,
             "categories_detail": breakdown,
             "is_demo": photo.landmarks_provider == "demo",
+            # Промежуточные величины и вклад категорий: отчёт можно проверить
+            # вручную, не пересчитывая геометрию заново.
+            "variables": {
+                key: float(value)
+                for key, value in result.auxiliary.items()
+                if key in VARIABLE_LABELS
+            },
+            "category_contributions": result.category_contributions,
         },
         recommendations={
             "items": [
@@ -232,10 +246,18 @@ async def get_public_report(db: AsyncSession, token: str) -> Report | None:
 
 
 def serialize_metrics(report: Report) -> list[MetricOut]:
-    """Метрики отчёта в схему API (по возрастанию балла)."""
+    """Метрики отчёта в схему API (по возрастанию балла).
+
+    Допуск и формула берутся из спецификаций, а не из БД: они неизменны для
+    версии модели и нужны только для объяснения расчёта в интерфейсе.
+    """
     out: list[MetricOut] = []
     for metric in report.metrics:
         extra = metric.extra or {}
+        spec = METRIC_BY_KEY.get(metric.key)
+        tolerance = spec.tolerance if spec else 0.0
+        deviation = metric.deviation
+        z_score = abs(deviation) / tolerance if deviation is not None and tolerance > 0 else 0.0
         out.append(
             MetricOut(
                 key=metric.key,
@@ -244,12 +266,15 @@ def serialize_metrics(report: Report) -> list[MetricOut]:
                 category_label=category_label(metric.category),
                 raw_value=metric.raw_value,
                 reference_value=metric.reference_value,
-                deviation=metric.deviation,
+                deviation=deviation,
                 score=round(metric.score, 2),
                 weight=metric.weight,
                 unit=str(extra.get("unit", "")),
                 source=str(extra.get("source", "")),
                 notes=str(extra.get("notes", "")),
+                tolerance=tolerance,
+                z_score=round(z_score, 3),
+                formula=METRIC_FORMULAS.get(metric.key, ""),
             )
         )
     out.sort(key=lambda m: m.score)
@@ -287,6 +312,51 @@ def _report_landmarks(report: Report) -> dict[str, Any] | None:
     return photo.landmarks
 
 
+def _computation(report: Report, metrics: list[MetricOut]) -> ComputationOut:
+    """Собирает блок прозрачности: переменные, вклад категорий, формула итога.
+
+    Переменные и вклады лежат в summary (записываются при создании отчёта).
+    Для старых отчётов их там нет — тогда блок остаётся пустым, а метрики
+    всё равно показывают допуск и формулу.
+    """
+    summary = report.summary or {}
+    raw_variables = summary.get("variables") or {}
+    variables = [
+        VariableOut(key=key, label=VARIABLE_LABELS.get(key, key), value=float(value))
+        for key, value in sorted(raw_variables.items())
+    ]
+
+    contributions_raw = summary.get("category_contributions") or {}
+    contributions: list[CategoryContributionOut] = []
+    for item in _categories_detail(report):
+        contribution = float(contributions_raw.get(item.key, 0.0))
+        contributions.append(
+            CategoryContributionOut(
+                key=item.key,
+                label=item.label,
+                score=item.score,
+                weight=item.weight,
+                contribution=round(contribution, 3),
+                # Доля категории в сумме вкладов: показывает, что сильнее влияет.
+                share=round(contribution / sum(contributions_raw.values()), 4)
+                if contributions_raw and sum(contributions_raw.values()) > 0
+                else 0.0,
+            )
+        )
+
+    numerator = round(sum(float(v) for v in contributions_raw.values()), 3)
+    denominator = round(
+        sum(item.weight for item in _categories_detail(report) if item.weight > 0), 3
+    )
+    return ComputationOut(
+        variables=variables,
+        category_contributions=contributions,
+        overall_formula="Σ(score_category × weight_category) / Σ(weight_category)",
+        overall_numerator=numerator,
+        overall_denominator=denominator,
+    )
+
+
 def serialize_report(report: Report) -> ReportOut:
     """Полный отчёт в схему API."""
     metrics = serialize_metrics(report)
@@ -302,6 +372,7 @@ def serialize_report(report: Report) -> ReportOut:
         disclaimer=DEMO_DISCLAIMER if demo else DISCLAIMER,
         image_url=f"/api/photos/{report.photo_id}/image",
         is_demo=demo,
+        computation=_computation(report, metrics),
         landmarks=_report_landmarks(report),
     )
 

@@ -44,6 +44,7 @@ def _metric_block(m: MetricOut) -> str:
         deviation = f" · отклонение {sign}{m.deviation:.2f}"
     notes = f'<p class="m-note">{m.notes}</p>' if m.notes else ""
     source = f'<p class="m-src">Источник: {m.source}</p>' if m.source else ""
+    formula = f'<p class="m-formula"><code>{m.formula}</code></p>' if m.formula else ""
     return f"""
       <div class="metric">
         <div class="m-head">
@@ -54,6 +55,7 @@ def _metric_block(m: MetricOut) -> str:
         {_gauge(m.score)}
         <p class="m-values">Ваше значение: {_fmt(m.raw_value)}{unit}
            · эталон: {_fmt(m.reference_value)}{deviation}</p>
+        {formula}
         {notes}
         {source}
       </div>"""
@@ -71,6 +73,51 @@ def _category_block(report: ReportOut) -> str:
         </div>"""
         for c in report.categories_detail
     )
+
+
+def _computation_block(report: ReportOut) -> str:
+    """Печатный блок «Как посчитан итог»: вклад категорий и переменные расчёта."""
+    comp = report.computation
+    if not comp.variables and not comp.category_contributions:
+        return ""
+
+    rows = "".join(
+        f"""<tr>
+              <td>{c.label}</td>
+              <td style="color:{_score_color(c.score)};font-weight:600">{c.score:.2f}</td>
+              <td>{c.weight:.2f}</td>
+              <td>{c.contribution:.3f}</td>
+              <td class="muted">{c.share * 100:.1f}%</td>
+            </tr>"""
+        for c in comp.category_contributions
+    )
+    variables = "".join(
+        f"""<tr><td>{v.label}</td><td class="muted"><code>{v.key}</code></td>
+                <td>{v.value:.4f}</td></tr>"""
+        for v in comp.variables
+    )
+    formula = (
+        f'<p class="muted">{comp.overall_formula} → {comp.overall_numerator:.3f} / '
+        f"{comp.overall_denominator:.2f}</p>"
+        if comp.overall_formula
+        else ""
+    )
+    return f"""
+  <h2>Как посчитан итог</h2>
+  {formula}
+  <table class="tbl">
+    <thead>
+      <tr><th>Категория</th><th>Балл</th><th>Вес</th><th>Вклад</th><th>Доля</th></tr>
+    </thead>
+    <tbody>{rows}</tbody>
+  </table>
+  <h2>Переменные расчёта</h2>
+  <p class="muted">Промежуточные величины, из которых собраны метрики.
+     Все длины нормированы на ширину или высоту лица.</p>
+  <table class="tbl">
+    <thead><tr><th>Переменная</th><th>Обозначение</th><th>Значение</th></tr></thead>
+    <tbody>{variables}</tbody>
+  </table>"""
 
 
 def render_report_html(report: ReportOut, username: str = "") -> str:
@@ -99,6 +146,8 @@ def render_report_html(report: ReportOut, username: str = "") -> str:
         </div>"""
         for r in report.recommendations
     )
+
+    computation = _computation_block(report)
 
     return f"""<!DOCTYPE html>
 <html lang="ru">
@@ -139,6 +188,16 @@ def render_report_html(report: ReportOut, username: str = "") -> str:
   .m-values {{ margin: 0; font-size: 9px; color: #4b5563; }}
   .m-note {{ margin: 3px 0 0; font-size: 8.5px; color: #6b7280; }}
   .m-src {{ margin: 2px 0 0; font-size: 8px; color: #9aa3b2; }}
+  .m-formula {{ margin: 2px 0 0; font-size: 8.5px; }}
+  .m-formula code {{ font-family: "DejaVu Sans Mono", monospace; color: #1d4ed8; }}
+
+  .tbl {{ width: 100%; border-collapse: collapse; font-size: 9.5px;
+          break-inside: avoid; }}
+  .tbl th {{ text-align: left; border-bottom: 1px solid #cbd5e1; padding: 4px 6px;
+             color: #475569; font-weight: 600; }}
+  .tbl td {{ border-bottom: 1px solid #eef1f6; padding: 4px 6px; }}
+  .tbl code {{ font-family: "DejaVu Sans Mono", monospace; font-size: 8.5px;
+               color: #1d4ed8; }}
 
   .cols {{ display: flex; gap: 20px; }}
   .cols > div {{ flex: 1; }}
@@ -175,6 +234,8 @@ def render_report_html(report: ReportOut, username: str = "") -> str:
 
   <h2>Метрики: шкалы и пояснения</h2>
   <div class="metrics">{metrics_html}</div>
+
+  {computation}
 
   <h2>Рекомендации</h2>
   {recommendations or '<p class="muted">Явных зон роста не выявлено.</p>'}

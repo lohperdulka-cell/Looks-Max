@@ -163,6 +163,60 @@ async def test_export_pdf_or_503(client: AsyncClient, seeded_photo: int) -> None
         assert resp.content.startswith(b"%PDF")
 
 
+async def test_report_exposes_computation_variables(client: AsyncClient, seeded_photo: int) -> None:
+    """Отчёт отдаёт переменные расчёта и вклад категорий для проверки вручную."""
+    payload = (await client.post(f"/api/reports?photo_id={seeded_photo}")).json()
+    computation = payload["computation"]
+
+    variables = {v["key"]: v for v in computation["variables"]}
+    assert "face_width" in variables
+    assert variables["face_width"]["value"] > 0
+    # У каждой переменной есть человекочитаемое название, не сырой ключ.
+    assert variables["face_width"]["label"] != "face_width"
+
+    contributions = computation["category_contributions"]
+    assert contributions
+    assert all(c["weight"] > 0 for c in contributions)
+
+
+async def test_overall_score_equals_weighted_categories(
+    client: AsyncClient, seeded_photo: int
+) -> None:
+    """Итог в отчёте сходится с суммой вкладов категорий, делённой на сумму весов."""
+    payload = (await client.post(f"/api/reports?photo_id={seeded_photo}")).json()
+    computation = payload["computation"]
+    numerator = sum(c["contribution"] for c in computation["category_contributions"])
+    denominator = computation["overall_denominator"]
+    assert denominator > 0
+    assert numerator / denominator == pytest.approx(payload["overall_score"], abs=0.01)
+
+
+async def test_metrics_expose_tolerance_and_formula(client: AsyncClient, seeded_photo: int) -> None:
+    """Каждая метрика объяснима: допуск, z-оценка и формула заполнены."""
+    payload = (await client.post(f"/api/reports?photo_id={seeded_photo}")).json()
+    metrics = {m["key"]: m for m in payload["metrics"]}
+
+    canthal = metrics["canthal_tilt"]
+    assert canthal["tolerance"] == pytest.approx(4.0)
+    assert canthal["formula"]
+    # z = |отклонение| / допуск.
+    assert canthal["z_score"] == pytest.approx(
+        abs(canthal["deviation"]) / canthal["tolerance"], abs=0.01
+    )
+    # Формула есть у всех метрик, включая композит гармонии.
+    assert all(m["formula"] for m in payload["metrics"])
+
+
+async def test_export_html_has_computation_block(client: AsyncClient, seeded_photo: int) -> None:
+    """Печатная версия объясняет расчёт: вклад категорий и переменные."""
+    report_id = (await client.post(f"/api/reports?photo_id={seeded_photo}")).json()["id"]
+    html = (await client.get(f"/api/reports/{report_id}/export/html")).text
+    assert "Как посчитан итог" in html
+    assert "Переменные расчёта" in html
+    assert "face_width" in html
+    assert "weight_category" in html
+
+
 async def test_report_page_renders_for_user(client: AsyncClient, seeded_photo: int) -> None:
     resp = await client.get("/report")
     assert resp.status_code == 200

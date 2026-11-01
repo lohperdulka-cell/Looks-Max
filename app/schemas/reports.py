@@ -25,6 +25,40 @@ class MetricOut(BaseModel):
     unit: str = ""
     source: str = ""
     notes: str = ""
+    # Прозрачность расчёта: допуск, нормированное отклонение и формула.
+    tolerance: float = 0.0
+    z_score: float = 0.0
+    formula: str = ""
+
+
+class VariableOut(BaseModel):
+    """Промежуточная переменная расчёта (ширина лица, трети, ipd и т.д.)."""
+
+    key: str
+    label: str
+    value: float
+    unit: str = ""
+
+
+class CategoryContributionOut(BaseModel):
+    """Вклад категории в общий балл: score × weight."""
+
+    key: str
+    label: str
+    score: float
+    weight: float
+    contribution: float
+    share: float
+
+
+class ComputationOut(BaseModel):
+    """Прозрачность расчёта: переменные, вклад категорий и формула итога."""
+
+    variables: list[VariableOut] = Field(default_factory=list)
+    category_contributions: list[CategoryContributionOut] = Field(default_factory=list)
+    overall_formula: str = ""
+    overall_numerator: float = 0.0
+    overall_denominator: float = 0.0
 
 
 class RecommendationOut(BaseModel):
@@ -77,6 +111,8 @@ class ReportOut(ReportSummary):
     disclaimer: str = ""
     image_url: str = ""
     is_demo: bool = False
+    # Прозрачность: переменные расчёта и вклад категорий в общий балл.
+    computation: ComputationOut = Field(default_factory=ComputationOut)
     # Точки лица в нормализованных координатах: нужны, чтобы нарисовать
     # разметку метрик поверх фото в отчёте.
     landmarks: dict[str, Any] | None = None

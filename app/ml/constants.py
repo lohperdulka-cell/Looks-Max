@@ -253,6 +253,45 @@ METRIC_SPECS: tuple[MetricSpec, ...] = (
 
 METRIC_BY_KEY: dict[str, MetricSpec] = {spec.key: spec for spec in METRIC_SPECS}
 
+# Формула расчёта каждой метрики в терминах промежуточных переменных.
+# Показывается в отчёте, чтобы результат можно было проверить вручную:
+# подставив значения из блока «Переменные расчёта», получаем raw_value.
+METRIC_FORMULAS: dict[str, str] = {
+    "facial_symmetry": "mean(|d_left − d_right|) / face_width",
+    "canthal_tilt": "(tilt(eye_left) + tilt(eye_right)) / 2",
+    "facial_thirds": "min(t1, t2, t3) / max(t1, t2, t3)",
+    "facial_fifths": "min(eye_w_l, intercanthal, eye_w_r) / max(…)",
+    "golden_ratio": "face_height / cheek_width",
+    "interpupillary_ratio": "ipd / face_width",
+    "eye_spacing": "intercanthal / mean(eye_w_l, eye_w_r)",
+    "brow_tilt": "(tilt(brow_left) + tilt(brow_right)) / 2",
+    "nose_proportion": "nose_width / nose_height",
+    "mouth_proportion": "mouth_width / lip_height",
+    "philtrum_ratio": "philtrum / third_lower",
+    "gonial_angle": "mean(∠(ramus, jaw, chin)_left, …_right)",
+    "bigonial_width": "bigonial / face_width",
+    "jaw_angularity": "bigonial / cheek_width",
+    "facial_dimorphism": "(bigonial / cheek_width) · (ipd / face_width) / 0.46",
+    "lower_upper_face_ratio": "third_lower / third_middle",
+    "harmony": "10 · exp(−std(scores) / 1.8)",
+}
+
+# Человекочитаемые названия промежуточных переменных (для блока «Переменные»).
+VARIABLE_LABELS: dict[str, str] = {
+    "face_width": "Ширина лица",
+    "face_height": "Высота лица",
+    "aspect_ratio": "Отношение высоты к ширине",
+    "third_upper": "Верхняя треть",
+    "third_middle": "Средняя треть",
+    "third_lower": "Нижняя треть",
+    "lower_upper_face_ratio": "Нижняя треть / средняя треть",
+    "ipd": "Межзрачковое расстояние",
+    "nose_width_ratio": "Ширина носа / ширина лица",
+    "mouth_width_ratio": "Ширина рта / ширина лица",
+    "bigonial": "Межгониальный размер",
+    "brow_to_jaw": "Бровь → угол челюсти",
+}
+
 # Веса категорий при агрегации в общий балл (сумма нормируется).
 CATEGORY_WEIGHTS: dict[MetricCategory, float] = {
     MetricCategory.SYMMETRY: 0.20,

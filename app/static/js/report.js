@@ -262,9 +262,52 @@
           <td class="muted">${m.category_label}</td>
           <td>${m.raw_value === null ? '—' : m.raw_value.toFixed(3)} ${m.unit || ''}</td>
           <td class="muted">${m.reference_value === null ? '—' : m.reference_value.toFixed(3)}</td>
+          <td class="muted">${m.deviation === null ? '—' : (m.deviation > 0 ? '+' : '') + m.deviation.toFixed(3)}</td>
+          <td class="muted">${m.tolerance ? m.tolerance.toFixed(3) : '—'}</td>
+          <td class="muted">${m.z_score ? m.z_score.toFixed(2) : '—'}</td>
           <td style="color:${scoreColor(m.score)};font-weight:600">${m.score.toFixed(1)}</td>
         </tr>`)
       .join('');
+  };
+
+  /* --- Прозрачность расчёта: вклад категорий и переменные ------------------- */
+  const renderComputation = (computation) => {
+    const card = $('[data-computation-card]');
+    if (!card || !computation) return;
+    const hasData = computation.variables.length || computation.category_contributions.length;
+    if (!hasData) return;
+    card.hidden = false;
+
+    $('[data-computation-formula]').textContent = computation.overall_formula
+      ? `${computation.overall_formula} → ${computation.overall_numerator.toFixed(3)} / `
+        + `${computation.overall_denominator.toFixed(2)}`
+      : '';
+
+    const cBody = $('[data-contributions-table] tbody');
+    if (cBody) {
+      cBody.innerHTML = computation.category_contributions
+        .map((c) => `
+          <tr>
+            <td>${c.label}</td>
+            <td style="color:${scoreColor(c.score)};font-weight:600">${c.score.toFixed(2)}</td>
+            <td class="muted">${c.weight.toFixed(2)}</td>
+            <td>${c.contribution.toFixed(3)}</td>
+            <td class="muted">${(c.share * 100).toFixed(1)}%</td>
+          </tr>`)
+        .join('');
+    }
+
+    const vBody = $('[data-variables-table] tbody');
+    if (vBody) {
+      vBody.innerHTML = computation.variables
+        .map((v) => `
+          <tr>
+            <td>${v.label}</td>
+            <td class="muted"><code>${v.key}</code></td>
+            <td>${v.value.toFixed(4)}</td>
+          </tr>`)
+        .join('');
+    }
   };
 
   const renderRecommendations = (items) => {
@@ -331,6 +374,7 @@
     }
 
     renderTable(report.metrics);
+    renderComputation(report.computation);
     renderGauges(report.metrics);
     renderGallery(report);
     renderRecommendations(report.recommendations);
