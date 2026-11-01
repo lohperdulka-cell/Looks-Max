@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Упражнения — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <header class="page-head reveal">
+      <h1>Упражнения</h1>
+      <p class="muted">
+        Библиотека неинвазивных практик: уход, осанка, мимика, сон.
+        Отмечайте выполнение — считается серия дней.
+      </p>
+    </header>
+
+    <div class="ex-stats reveal">
+      <div class="ex-stat card"><span data-ex-streak>0</span><small>дней подряд</small></div>
+      <div class="ex-stat card"><span data-ex-total>0</span><small>выполнено всего</small></div>
+      <div class="ex-stat card"><span data-ex-today>0</span><small>сегодня</small></div>
+    </div>
+
+    <div class="ex-filters reveal" data-ex-filters>
+      <button class="btn btn-ghost btn-sm is-active" data-category="all">Все</button>
+      <button class="btn btn-ghost btn-sm" data-category="jawline">Челюсть</button>
+      <button class="btn btn-ghost btn-sm" data-category="posture">Осанка</button>
+      <button class="btn btn-ghost btn-sm" data-category="symmetry">Симметрия</button>
+      <button class="btn btn-ghost btn-sm" data-category="eyes">Глаза</button>
+      <button class="btn btn-ghost btn-sm" data-category="skin">Кожа</button>
+    </div>
+
+    <div class="ex-calendar card reveal" data-ex-calendar>
+      <h2 class="panel-title">Активность за 30 дней</h2>
+      <div class="ex-grid" data-ex-grid></div>
+    </div>
+
+    <div class="ex-recommended reveal" data-ex-recommended hidden>
+      <h2 class="panel-title">Под ваши зоны роста</h2>
+      <div class="ex-list" data-ex-rec-list></div>
+    </div>
+
+    <div class="ex-list" data-ex-list>
+      <div class="skeleton skeleton-row"></div>
+      <div class="skeleton skeleton-row"></div>
+      <div class="skeleton skeleton-row"></div>
+    </div>
+  </div>
+</section>
+
+<dialog class="modal" data-ex-modal>
+  <article class="modal-card">
+    <header class="modal-head">
+      <h2 data-ex-modal-title>Упражнение</h2>
+      <button class="btn btn-ghost btn-sm" type="button" data-ex-modal-close aria-label="Закрыть">✕</button>
+    </header>
+    <div class="modal-body" data-ex-modal-body></div>
+    <footer class="modal-foot">
+      <button class="btn btn-primary" type="button" data-ex-complete>Отметить выполнение</button>
+    </footer>
+  </article>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/exercises.js" defer></script>
+{% endblock %}

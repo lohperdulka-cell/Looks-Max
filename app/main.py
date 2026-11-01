@@ -134,6 +134,8 @@ def create_app() -> FastAPI:
 
     from app.api.auth import router as auth_router
     from app.api.battles import router as battles_router
+    from app.api.chat import router as chat_router
+    from app.api.exercises import router as exercises_router
     from app.api.pages import router as pages_router
     from app.api.photos import router as photos_router
     from app.api.profile import router as profile_router
@@ -145,6 +147,8 @@ def create_app() -> FastAPI:
     application.include_router(reports_router)
     application.include_router(profile_router)
     application.include_router(battles_router)
+    application.include_router(exercises_router)
+    application.include_router(chat_router)
     application.include_router(public_reports_router)
     application.include_router(pages_router)
 

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}ИИ-консультант — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <header class="page-head reveal">
+      <h1>ИИ-консультант</h1>
+      <p class="muted">
+        Разбор ваших метрик, план действий и ответы на вопросы. Консультант
+        опирается на последний отчёт и не даёт медицинских советов.
+      </p>
+    </header>
+
+    <div class="chat-layout">
+      <div class="chat-panel card reveal">
+        <div class="chat-scroll" data-chat-scroll>
+          <div class="chat-empty" data-chat-empty>
+            <p class="muted">Задайте вопрос или выберите быстрый промпт ниже.</p>
+          </div>
+        </div>
+        <form class="chat-form" data-chat-form>
+          <textarea
+            class="chat-input" name="message" rows="2" maxlength="2000"
+            placeholder="Например: что улучшить в первую очередь?" required></textarea>
+          <button class="btn btn-primary" type="submit" data-chat-send>Отправить</button>
+        </form>
+      </div>
+
+      <aside class="chat-side reveal">
+        <article class="card">
+          <h2 class="panel-title">Быстрые промпты</h2>
+          <div class="quick-prompts" data-quick-prompts></div>
+        </article>
+
+        <article class="card">
+          <h2 class="panel-title">План looksmax</h2>
+          <p class="muted small">Соберите персональный план по слабым метрикам.</p>
+          <label class="field">
+            <span>Горизонт, дней</span>
+            <input type="number" min="7" max="180" value="30" data-plan-days>
+          </label>
+          <button class="btn btn-primary btn-block" type="button" data-plan-generate>
+            Сгенерировать план
+          </button>
+          <div class="plan-result" data-plan-result></div>
+        </article>
+      </aside>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/chat.js" defer></script>
+{% endblock %}

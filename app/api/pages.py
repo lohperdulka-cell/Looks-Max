@@ -165,3 +165,19 @@ async def battles_page(request: Request, user: OptionalUser) -> Response:
     if user is None:
         return RedirectResponse("/login?next=/battles", status_code=302)
     return templates.TemplateResponse(request, "battles.html", _base_context(request, user))
+
+
+@router.get("/exercises", response_class=HTMLResponse)
+async def exercises_page(request: Request, user: OptionalUser) -> Response:
+    """Страница библиотеки упражнений с прогрессом."""
+    if user is None:
+        return RedirectResponse("/login?next=/exercises", status_code=302)
+    return templates.TemplateResponse(request, "exercises.html", _base_context(request, user))
+
+
+@router.get("/chat", response_class=HTMLResponse)
+async def chat_page(request: Request, user: OptionalUser) -> Response:
+    """Страница ИИ-консультанта."""
+    if user is None:
+        return RedirectResponse("/login?next=/chat", status_code=302)
+    return templates.TemplateResponse(request, "chat.html", _base_context(request, user))

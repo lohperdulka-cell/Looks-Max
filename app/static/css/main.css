@@ -556,3 +556,80 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
 @media (min-width: 980px) {
   .battle-layout { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
 }
+
+/* ==========================================================================
+   Упражнения (/exercises)
+   ========================================================================== */
+.ex-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
+.ex-stat { display: flex; flex-direction: column; align-items: center; padding: 14px; }
+.ex-stat span { font-size: 1.6rem; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.ex-stat small { font-size: .74rem; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .05em; }
+.ex-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+.ex-calendar { margin-bottom: 20px; }
+.ex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(14px, 1fr)); gap: 4px; margin-top: 12px; }
+.ex-cell { aspect-ratio: 1; border-radius: 3px; background: var(--surface-2); }
+.ex-cell.level-1 { background: color-mix(in srgb, var(--accent) 30%, var(--surface-2)); }
+.ex-cell.level-2 { background: color-mix(in srgb, var(--accent) 55%, var(--surface-2)); }
+.ex-cell.level-3 { background: color-mix(in srgb, var(--accent) 78%, var(--surface-2)); }
+.ex-cell.level-4 { background: var(--accent); }
+.ex-recommended { margin-bottom: 20px; }
+.ex-list { display: grid; gap: 12px; }
+.ex-card { display: grid; gap: 8px; padding: 16px; }
+.ex-card.is-done { border-color: color-mix(in srgb, var(--ok) 55%, var(--border)); }
+.ex-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.ex-card-head h3 { margin: 0; font-size: 1.02rem; }
+.ex-badge {
+  flex: none; padding: 2px 9px; border-radius: 999px; font-size: .72rem;
+  background: var(--surface-2); color: var(--fg-muted); white-space: nowrap;
+}
+.ex-card-foot { display: flex; align-items: center; gap: 12px; }
+.ex-card-foot .btn { margin-left: auto; }
+.ex-instructions {
+  white-space: pre-wrap; font-family: inherit; background: var(--surface-2);
+  border-radius: var(--radius-sm); padding: 12px; font-size: .88rem; line-height: 1.6;
+}
+.skeleton-row { height: 92px; border-radius: var(--radius); }
+
+/* ==========================================================================
+   ИИ-чат (/chat)
+   ========================================================================== */
+.chat-layout { display: grid; gap: 18px; }
+.chat-panel { display: grid; grid-template-rows: 1fr auto; min-height: 60vh; padding: 0; overflow: hidden; }
+.chat-scroll { overflow-y: auto; padding: 18px; display: grid; gap: 12px; align-content: start; }
+.chat-empty { display: grid; place-items: center; min-height: 200px; text-align: center; }
+.chat-bubble { max-width: 78%; padding: 10px 14px; border-radius: 14px; line-height: 1.55; }
+.chat-user { justify-self: end; background: color-mix(in srgb, var(--accent) 22%, var(--surface-2)); }
+.chat-assistant { justify-self: start; background: var(--surface-2); }
+.chat-assistant.is-typing::after { content: '▍'; opacity: .6; animation: blink 1s steps(2) infinite; }
+.chat-text { white-space: pre-wrap; }
+.chat-form { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 14px; border-top: 1px solid var(--border); }
+.chat-input {
+  resize: none; padding: 10px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--fg);
+  font: inherit;
+}
+.chat-side { display: grid; gap: 16px; align-content: start; }
+.quick-prompts { display: grid; gap: 8px; margin-top: 10px; }
+.quick-prompt {
+  text-align: left; padding: 9px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--fg);
+  font: inherit; font-size: .88rem; cursor: pointer; transition: border-color .15s;
+}
+.quick-prompt:hover { border-color: var(--accent); }
+.plan-result { margin-top: 12px; }
+.plan-body {
+  white-space: pre-wrap; font-family: inherit; font-size: .86rem; line-height: 1.6;
+  background: var(--surface-2); border-radius: var(--radius-sm); padding: 12px;
+}
+.btn-block { width: 100%; }
+.field { display: grid; gap: 6px; margin: 10px 0; }
+.field span { font-size: .8rem; color: var(--fg-muted); }
+.field input {
+  padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border);
+  background: var(--surface-2); color: var(--fg); font: inherit;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+@media (min-width: 980px) {
+  .chat-layout { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; }
+}
