@@ -373,3 +373,39 @@ async def test_robots_disallows_service_sections(client: AsyncClient) -> None:
 async def test_public_pages_have_description_meta(client: AsyncClient, path: str) -> None:
     resp = await client.get(path)
     assert 'name="description"' in resp.text
+
+
+# --- фронтенд: защита от XSS при подстановке данных из API --------------------
+
+
+def test_js_sinks_escape_user_controlled_text() -> None:
+    """Данные из API подставляются в innerHTML — они должны быть экранированы.
+
+    display_name, owner и текст ошибок контролирует пользователь, поэтому
+    интерполяция их в разметку без escapeHtml — это XSS.
+    """
+    from pathlib import Path
+
+    js_dir = Path(__file__).resolve().parents[1] / "app" / "static" / "js"
+    battles = (js_dir / "battles.js").read_text(encoding="utf-8")
+    app = (js_dir / "app.js").read_text(encoding="utf-8")
+
+    assert "escapeHtml(photo.owner)" in battles
+    assert "escapeHtml(row.display_name" in battles
+    assert "escapeHtml(err.message)" in battles
+    assert "escapeHtml(user.display_name" in app
+
+
+def test_toast_renders_message_as_text_not_markup() -> None:
+    """Тост получает detail из ответов API, поэтому не должен использовать innerHTML."""
+    import re
+    from pathlib import Path
+
+    app = (Path(__file__).resolve().parents[1] / "app" / "static" / "js" / "app.js").read_text(
+        encoding="utf-8"
+    )
+    toast_body = app.split("const toast = ")[1].split("window.fmToast")[0]
+    # Комментарии упоминают innerHTML как антипример — сравниваем только код.
+    code = re.sub(r"//[^\n]*", "", toast_body)
+    assert "innerHTML" not in code
+    assert "createTextNode" in code

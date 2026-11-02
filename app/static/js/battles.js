@@ -8,6 +8,7 @@
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const api = window.fmApi;
   const toast = window.fmToast;
+  const escapeHtml = window.fmEscape;
   if (!api || !$('[data-battle-stage]')) return;
 
   const stage = $('[data-battle-stage]');
@@ -18,7 +19,7 @@
   const photoCard = (side, photo) => `
     <button class="battle-card" type="button" data-photo-id="${photo.id}" data-side="${side}">
       <img src="${photo.image_url}" alt="Фото участника" loading="lazy">
-      <span class="battle-owner muted small">${photo.owner || 'участник'}</span>
+      <span class="battle-owner muted small">${escapeHtml(photo.owner) || 'участник'}</span>
       <span class="battle-votes" data-votes="${side}">0</span>
       <span class="battle-pick">Выбрать</span>
     </button>`;
@@ -107,7 +108,7 @@
       stage.innerHTML = `
         <div class="empty-state">
           <h2>Батл недоступен</h2>
-          <p class="muted">${err.message || 'Нужно публичное фото хорошего качества.'}</p>
+          <p class="muted">${escapeHtml(err.message) || 'Нужно публичное фото хорошего качества.'}</p>
           <a class="btn btn-primary" href="/rate">Загрузить фото</a>
         </div>`;
     }
@@ -124,7 +125,7 @@
       .map((row) => `
         <li class="lb-row ${row.rank <= 3 ? `lb-top lb-top-${row.rank}` : ''}">
           <span class="lb-rank">${row.rank}</span>
-          <span class="lb-name">${row.display_name || '@' + row.username}</span>
+          <span class="lb-name">${escapeHtml(row.display_name || '@' + row.username)}</span>
           <span class="lb-wl muted small">${row.wins}/${row.losses}</span>
           <span class="lb-elo">${row.elo}</span>
         </li>`)

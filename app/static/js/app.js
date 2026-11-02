@@ -52,7 +52,13 @@
     const el = document.createElement('div');
     el.className = `toast is-${type}`;
     el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-    el.innerHTML = `<strong aria-hidden="true">${TOAST_ICONS[type] || ''}</strong> ${message}`;
+    // Иконка — статичная, текст — всегда текстовым узлом: сюда попадают detail
+    // из ответов API (в них бывает имя пользователя) и err.message, поэтому
+    // innerHTML с интерполяцией сообщения давал бы XSS из чужих данных.
+    const icon = document.createElement('strong');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = TOAST_ICONS[type] || '';
+    el.append(icon, document.createTextNode(` ${String(message ?? '')}`));
     stack.appendChild(el);
     const remove = () => {
       el.classList.add('is-hiding');
@@ -258,7 +264,7 @@
     api('/api/auth/me')
       .then((user) => {
         authSlot.innerHTML =
-          `<span class="nav-user muted">${user.display_name || user.username}</span>` +
+          `<span class="nav-user muted">${escapeHtml(user.display_name || user.username)}</span>` +
           `<button class="btn btn-ghost" type="button" data-logout>Выйти</button>`;
         const out = $('[data-logout]', authSlot);
         if (out) {
