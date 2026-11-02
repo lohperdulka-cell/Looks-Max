@@ -110,7 +110,9 @@ class PageView(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     path: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
-    kind: Mapped[str] = mapped_column(String(32), default="page", nullable=False)
+    kind: Mapped[str] = mapped_column(
+        String(32), default="page", server_default="page", nullable=False
+    )
     user_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), default=None, index=True
     )
