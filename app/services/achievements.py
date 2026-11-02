@@ -107,7 +107,7 @@ ACHIEVEMENT_CATALOG: tuple[AchievementSpec, ...] = (
     AchievementSpec(
         code="battles_10",
         title="Участник батлов",
-        description="Десять голосов в мобатлах.",
+        description="Десять голосов в моггбатлах.",
         icon="swords",
         threshold=10,
         metric="battle_votes",

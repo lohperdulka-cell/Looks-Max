@@ -167,7 +167,7 @@ async def profile_page(request: Request, user: OptionalUser) -> Response:
 
 @router.get("/battles", response_class=HTMLResponse)
 async def battles_page(request: Request, user: OptionalUser) -> Response:
-    """Страница мобатлов: пара фото, голосование, лидерборд."""
+    """Страница моггбатлов: пара фото, голосование, лидерборд."""
     if user is None:
         return RedirectResponse("/login?next=/battles", status_code=302)
     return templates.TemplateResponse(request, "battles.html", _base_context(request, user))

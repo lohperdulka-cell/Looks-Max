@@ -1,4 +1,4 @@
-"""Сервис мобатлов: подбор пар, голосование, ELO, лидерборд, анти-чит.
+"""Сервис моггбатлов: подбор пар, голосование, ELO, лидерборд, анти-чит.
 
 Логика:
   * пара собирается из публичных фото разных пользователей с близким ELO;
@@ -32,7 +32,7 @@ MIN_BATTLE_PHOTO_SIDE = 300
 
 
 class BattleError(Exception):
-    """Нарушение правил мобатлов (для преобразования в HTTP-ответ)."""
+    """Нарушение правил моггбатлов (для преобразования в HTTP-ответ)."""
 
 
 @dataclass(slots=True)
@@ -150,7 +150,7 @@ async def find_opponent(db: AsyncSession, photo: Photo, owner_elo: int) -> Photo
                 Photo.quality_score >= MIN_QUALITY_FOR_BATTLE,
                 User.is_active.is_(True),
                 User.is_banned.is_(False),
-                # Opt-out владельца: галочка «Показывать в мобатлах» должна
+                # Opt-out владельца: галочка «Показывать в моггбатлах» должна
                 # реально исключать фото из подбора, а не только храниться.
                 User.show_in_battles.is_(True),
                 User.elo.between(owner_elo - window, owner_elo + window),

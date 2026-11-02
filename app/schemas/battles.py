@@ -1,4 +1,4 @@
-"""Pydantic-схемы мобатлов."""
+"""Pydantic-схемы моггбатлов."""
 
 from __future__ import annotations
 

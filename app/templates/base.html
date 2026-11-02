@@ -11,7 +11,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="{{ app_name }}">
   <meta property="og:title" content="{% block og_title %}{{ app_name }} — объективная оценка внешности{% endblock %}">
-  <meta property="og:description" content="Метрики пропорций лица, отчёт с графиками, прогресс и мобатлы.">
+  <meta property="og:description" content="Метрики пропорций лица, отчёт с графиками, прогресс и моггбатлы.">
   <meta property="og:url" content="{{ base_url }}{{ request.url.path if request else '/' }}">
   <meta property="og:image" content="{{ base_url }}/static/img/og-cover.svg">
   <meta name="twitter:card" content="summary_large_image">
@@ -72,7 +72,7 @@
       <nav aria-label="Продукт">
         <h3>Продукт</h3>
         <a href="/rate">Оценка</a>
-        <a href="/battles">Мобатлы</a>
+        <a href="/battles">Моггбатлы</a>
         <a href="/exercises">Упражнения</a>
         <a href="/chat">ИИ-консультант</a>
         {% if user and user.is_admin %}<a href="/admin">Админка</a>{% endif %}
