@@ -64,7 +64,15 @@ RUN pip install --upgrade pip \
 
 COPY . .
 
-RUN mkdir -p data/media data/models
+# Модель MediaPipe запекается в образ: data/models исключён через .dockerignore,
+# и без этого шага контейнер качает 3.6 МБ при каждом холодном старте Render.
+# Если сеть при сборке недоступна, шаг не валит сборку — модель догрузится в
+# рантайме (_ensure_mediapipe_task_model), просто первый запрос будет медленнее.
+ARG MP_MODEL_URL="https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task"
+RUN mkdir -p data/media data/models \
+    && { curl -fsSL --retry 3 --retry-delay 2 -o data/models/face_landmarker.task.tmp "$MP_MODEL_URL" \
+         && mv data/models/face_landmarker.task.tmp data/models/face_landmarker.task \
+         || echo "WARN: модель MediaPipe не скачалась при сборке — догрузится при старте"; }
 
 EXPOSE 8000
 

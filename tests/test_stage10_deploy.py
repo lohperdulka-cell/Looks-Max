@@ -501,3 +501,44 @@ def test_default_provider_is_mediapipe():
     assert defaults.ml_provider_primary == "mediapipe"
     assert "landmark_2d_106" in defaults.ml_insightface_modules
     assert "recognition" not in defaults.ml_insightface_modules
+
+
+# --- Модель MediaPipe --------------------------------------------------------
+
+
+def test_mediapipe_model_rejects_truncated_file(tmp_path, monkeypatch):
+    """Обрезанный файл модели не должен считаться готовым.
+
+    Скачивание может прерваться, а `exists()` для такого файла истинно —
+    MediaPipe упал бы при инициализации и молча ушёл в демо-сетку.
+    """
+    monkeypatch.setattr(lm_module.settings, "ml_model_dir", tmp_path)
+    path = lm_module._mediapipe_task_model_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"x" * 100)
+    monkeypatch.setattr(lm_module.settings, "ml_mediapipe_allow_download", False)
+
+    assert lm_module._ensure_mediapipe_task_model() is None
+
+
+def test_mediapipe_model_accepts_valid_file(tmp_path, monkeypatch):
+    """Файл достаточного размера берётся без скачивания."""
+    monkeypatch.setattr(lm_module.settings, "ml_model_dir", tmp_path)
+    path = lm_module._mediapipe_task_model_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"x" * (lm_module._MIN_MEDIAPIPE_MODEL_BYTES + 1))
+
+    assert lm_module._ensure_mediapipe_task_model() == path
+
+
+def test_mediapipe_model_download_failure_is_swallowed(tmp_path, monkeypatch):
+    """Сбой скачивания не бросает исключение: провайдер просто недоступен."""
+    monkeypatch.setattr(lm_module.settings, "ml_model_dir", tmp_path)
+    monkeypatch.setattr(lm_module.settings, "ml_mediapipe_allow_download", True)
+
+    def _boom(*args, **kwargs):
+        raise OSError("сеть недоступна")
+
+    monkeypatch.setattr("urllib.request.urlopen", _boom)
+
+    assert lm_module._ensure_mediapipe_task_model() is None

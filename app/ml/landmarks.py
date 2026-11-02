@@ -55,6 +55,10 @@ _mediapipe_mesh: Any | None = None
 _insightface_failed = False
 _mediapipe_failed = False
 
+# Модель FaceLandmarker весит ~3.6 МБ. Файл меньше мегабайта — это обрыв
+# скачивания или HTML-заглушка прокси, а не модель.
+_MIN_MEDIAPIPE_MODEL_BYTES = 1_000_000
+
 # Соответствие файлов buffalo_l задачам InsightFace. Нужно, чтобы физически
 # оставить только требуемые модели: полный набор даёт пик ~920 МБ RSS.
 _IF_TASK_BY_FILE = {
@@ -174,7 +178,9 @@ def _ensure_mediapipe_task_model() -> Path | None:
     которому нужен файл модели. Кэшируем его в ml_model_dir.
     """
     path = _mediapipe_task_model_path()
-    if path.exists():
+    # Порог отсекает обрезанные и пустые файлы: скачивание может прерваться,
+    # а exists() для такого файла истинно, и MediaPipe упал бы при инициализации.
+    if path.exists() and path.stat().st_size >= _MIN_MEDIAPIPE_MODEL_BYTES:
         return path
     if not settings.ml_mediapipe_allow_download:
         return None
@@ -185,6 +191,8 @@ def _ensure_mediapipe_task_model() -> Path | None:
         tmp = path.with_suffix(".task.tmp")
         with urllib.request.urlopen(settings.ml_mediapipe_model_url, timeout=60) as resp:
             tmp.write_bytes(resp.read())
+        if tmp.stat().st_size < _MIN_MEDIAPIPE_MODEL_BYTES:
+            raise RuntimeError(f"модель повреждена: {tmp.stat().st_size} байт")
         tmp.replace(path)
         logger.info("ml.mediapipe.model_downloaded", path=str(path))
         return path
