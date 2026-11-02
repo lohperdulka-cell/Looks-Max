@@ -376,7 +376,12 @@ def _extract_legacy(pts: np.ndarray) -> _PointMap:
         "gonion_right": pts[12],
     }
     return _PointMap(
-        points=points, contour=contour, face_width=face_w, face_height=face_h, scheme="legacy"
+        points=points,
+        contour=contour,
+        face_width=face_w,
+        face_height=face_h,
+        scheme="legacy",
+        contour_span=slice(0, 17),
     )
 
 
