@@ -1,6 +1,14 @@
 /* ==========================================================================
-   FaceMetric — страница оценки: загрузка фото, canvas-редактор точек,
-   предпросмотр метрик.
+   FaceMetric — страница оценки: загрузка фото, качество, предпросмотр метрик
+   и сохранение отчёта.
+
+   Совмещение лица и разметку точек делает «студия» (studio.js) в модальном
+   окне на весь экран. Здесь остаётся то, что живёт на самой странице: выбор
+   файла, оценка качества, пол для эталонов, показ метрик и создание отчёта.
+
+   Раньше этот файл ещё и рисовал canvas с точками, из-за чего состояние точек
+   дублировалось между страницей и мастером. Теперь источник точек один —
+   разметка, сохранённая студией на бэкенде.
    ========================================================================== */
 (() => {
   'use strict';
@@ -9,8 +17,11 @@
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
   const api = window.fmApi;
   const toast = window.fmToast;
+  if (!api) return;
 
-  if (!api || !$('[data-dropzone]')) return;
+  const escapeHtml = (s) =>
+    String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
   const dropzone = $('[data-dropzone]');
   const fileInput = $('[data-file-input]');
@@ -18,46 +29,34 @@
   const progressBar = $('[data-upload-progress] > i');
   const steps = $('[data-upload-steps]');
   const qualityBox = $('[data-quality]');
-  const canvas = $('[data-canvas]');
-  const canvasHint = $('[data-canvas-hint]');
-  const runBtn = $('[data-run-preview]');
-  const resetBtn = $('[data-reset-points]');
-  const reportBtn = $('[data-create-report]');
-  const wizardBtn = $('[data-open-wizard]');
+  const genderPick = $('[data-gender-pick]');
   const previewEmpty = $('[data-preview-empty]');
   const previewContent = $('[data-preview-content]');
-  const genderPick = $('[data-gender-pick]');
+  const runBtn = $('[data-run-preview]');
+  const editBtn = $('[data-open-studio]');
+  const reportBtn = $('[data-create-report]');
 
-  const ctx = canvas.getContext('2d');
+  const state = { photo: null, preview: null };
 
-  /** Состояние страницы. */
-  const state = {
-    photo: null,          // метаданные фото с сервера
-    image: null,          // HTMLImageElement
-    points: [],           // [{x, y}] в нормализованных координатах 0..1
-    originalPoints: [],   // для сброса
-    dragging: -1,         // индекс перетаскиваемой точки
-    dirty: false,
-    objectUrl: null,
-  };
+  const hasStudio = () => Boolean(window.fmStudio);
+  if (!dropzone) return;
+
+  /* --- Индикатор загрузки --------------------------------------------------- */
 
   const setStep = (name, status) => {
     const li = steps && $(`[data-step="${name}"]`, steps);
-    if (!li) return;
-    li.classList.toggle('is-active', status === 'active');
-    li.classList.toggle('is-done', status === 'done');
+    if (li) li.className = `is-${status}`;
   };
 
   const setProgress = (value) => {
-    if (!progress) return;
-    progress.hidden = value <= 0;
-    if (progressBar) progressBar.style.width = `${Math.round(value * 100)}%`;
+    if (!progress || !progressBar) return;
+    progress.hidden = false;
+    progressBar.style.width = `${Math.round(value * 100)}%`;
     if (value >= 1) setTimeout(() => { progress.hidden = true; }, 600);
   };
 
-  /* --- Пол для эталонов ---------------------------------------------------- */
-  // MediaPipe не предсказывает пол, поэтому эталоны диморфизма берутся из
-  // профиля. Кнопки позволяют задать пол, не уходя со страницы оценки.
+  /* --- Пол для эталонов ----------------------------------------------------- */
+
   const syncGenderChips = (gender) => {
     if (!genderPick) return;
     $$('.gender-chip', genderPick).forEach((btn) => {
@@ -69,13 +68,8 @@
 
   const saveGender = async (gender) => {
     try {
-      const profile = await api('/api/profile', {
-        method: 'PATCH',
-        body: { gender },
-      });
-      syncGenderChips(profile.gender || '');
-      resetPreview();
-      toast('Пол сохранён: эталоны метрик обновятся при следующем расчёте.', 'success');
+      await api('/api/profile', { method: 'PATCH', body: { gender } });
+      syncGenderChips(gender);
     } catch (err) {
       toast(err.message || 'Не удалось сохранить пол', 'error');
     }
@@ -89,24 +83,24 @@
   }
 
   const loadGender = async () => {
-    if (!genderPick) return;
     try {
       const profile = await api('/api/profile');
-      syncGenderChips(profile.gender || '');
-    } catch { /* гость — кнопки остаются неактивными */ }
+      syncGenderChips(profile.gender || 'other');
+    } catch { /* гость — пол не важен */ }
   };
 
-  /* --- Загрузка файла ------------------------------------------------------ */
-  const pickFile = () => fileInput.click();
+  /* --- Загрузка файла ------------------------------------------------------- */
 
+  const pickFile = () => fileInput.click();
   dropzone.addEventListener('click', pickFile);
   dropzone.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pickFile(); }
   });
   fileInput.addEventListener('change', () => {
-    if (fileInput.files && fileInput.files[0]) uploadFile(fileInput.files[0]);
+    const file = fileInput.files && fileInput.files[0];
+    if (file) uploadFile(file);
+    fileInput.value = '';
   });
-
   ['dragenter', 'dragover'].forEach((evt) =>
     dropzone.addEventListener(evt, (e) => {
       e.preventDefault();
@@ -135,6 +129,9 @@
 
     steps.hidden = false;
     setStep('upload', 'active');
+    setStep('detect', 'idle');
+    setStep('align', 'idle');
+    setStep('quality', 'idle');
     setProgress(0.15);
 
     const form = new FormData();
@@ -160,18 +157,12 @@
       setProgress(1);
 
       state.photo = data;
-      state.points = (data.landmarks && data.landmarks.points || []).map(([x, y]) => ({ x, y }));
-      state.originalPoints = state.points.map((p) => ({ ...p }));
-      state.dirty = false;
-
-      await loadImage(data.image_url);
       renderQuality(data.warnings || []);
-      runBtn.disabled = state.points.length === 0;
-      resetBtn.disabled = state.points.length === 0;
-      if (reportBtn) reportBtn.disabled = state.points.length === 0;
-      if (wizardBtn) wizardBtn.disabled = false;
-      toast('Фото обработано. Точки можно поправить.', 'success');
+      setActionsEnabled(true);
       resetPreview();
+      toast('Фото загружено', 'success');
+      // Сразу открываем студию: пользователь не должен искать кнопку.
+      openStudio();
     } catch (err) {
       setStep('upload', 'done');
       setProgress(0);
@@ -179,161 +170,36 @@
     }
   };
 
-  const loadImage = (url) =>
-    new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
-        state.image = img;
-        resizeCanvasToImage(img);
-        if (canvasHint) canvasHint.hidden = true;
-        // Анимация «сканирования»: точки проявляются за линией сканера,
-        // затем соединяются линиями. После неё — обычный режим редактора.
-        if (window.fmScan && state.points.length) {
-          window.fmScan.playScan(canvas, img, state.points, {
-            onDone: () => draw(),
-          });
-        } else {
-          draw();
-        }
-        resolve(img);
-      };
-      img.onerror = () => reject(new Error('Не удалось отобразить изображение'));
-      img.src = url;
-    });
-
-  const resizeCanvasToImage = (img) => {
-    const wrapWidth = canvas.parentElement.clientWidth || 520;
-    const ratio = img.naturalHeight / img.naturalWidth;
-    canvas.width = Math.min(wrapWidth, 640);
-    canvas.height = Math.round(canvas.width * ratio);
+  const setActionsEnabled = (on) => {
+    if (runBtn) runBtn.disabled = !on;
+    if (reportBtn) reportBtn.disabled = !on;
+    if (editBtn) editBtn.disabled = !on || !hasStudio();
   };
 
-  /* --- Отрисовка canvas ---------------------------------------------------- */
-  const draw = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!state.image) return;
+  /* --- Качество фото -------------------------------------------------------- */
 
-    ctx.drawImage(state.image, 0, 0, canvas.width, canvas.height);
-
-    if (state.points.length) {
-      // Линии, помогающие оценить симметрию и трети.
-      ctx.save();
-      ctx.strokeStyle = 'rgba(79, 209, 197, .55)';
-      ctx.lineWidth = 1;
-      ctx.setLineDash([5, 5]);
-      ctx.beginPath();
-      ctx.moveTo(0, canvas.height / 2);
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
-      ctx.restore();
-
-      state.points.forEach((p, i) => {
-        const x = p.x * canvas.width;
-        const y = p.y * canvas.height;
-        ctx.beginPath();
-        ctx.arc(x, y, i === state.dragging ? 8 : 5.5, 0, Math.PI * 2);
-        ctx.fillStyle = i === state.dragging ? '#7c9cff' : '#4fd1c5';
-        ctx.fill();
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = 'rgba(11, 15, 20, .85)';
-        ctx.stroke();
-      });
-    }
-  };
-
-  /* --- Перетаскивание точек ------------------------------------------------ */
-  const hitTest = (px, py) => {
-    const threshold = 14;
-    let best = -1;
-    let bestDist = Infinity;
-    state.points.forEach((p, i) => {
-      const dx = p.x * canvas.width - px;
-      const dy = p.y * canvas.height - py;
-      const dist = Math.hypot(dx, dy);
-      if (dist < threshold && dist < bestDist) { best = i; bestDist = dist; }
-    });
-    return best;
-  };
-
-  const eventPos = (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return {
-      x: (clientX - rect.left) * (canvas.width / rect.width),
-      y: (clientY - rect.top) * (canvas.height / rect.height),
-    };
-  };
-
-  const onDown = (e) => {
-    if (!state.points.length) return;
-    const { x, y } = eventPos(e);
-    state.dragging = hitTest(x, y);
-    if (state.dragging >= 0) {
-      e.preventDefault();
-      canvas.style.cursor = 'grabbing';
-      draw();
-    }
-  };
-
-  const onMove = (e) => {
-    if (!state.points.length) return;
-    const { x, y } = eventPos(e);
-    if (state.dragging >= 0) {
-      e.preventDefault();
-      state.points[state.dragging] = {
-        x: Math.min(1, Math.max(0, x / canvas.width)),
-        y: Math.min(1, Math.max(0, y / canvas.height)),
-      };
-      state.dirty = true;
-      draw();
-    } else {
-      canvas.style.cursor = hitTest(x, y) >= 0 ? 'grab' : 'default';
-    }
-  };
-
-  const onUp = () => {
-    if (state.dragging >= 0) {
-      state.dragging = -1;
-      canvas.style.cursor = 'default';
-      draw();
-    }
-  };
-
-  canvas.addEventListener('mousedown', onDown);
-  canvas.addEventListener('mousemove', onMove);
-  window.addEventListener('mouseup', onUp);
-  canvas.addEventListener('touchstart', onDown, { passive: false });
-  canvas.addEventListener('touchmove', onMove, { passive: false });
-  window.addEventListener('touchend', onUp);
-
-  window.addEventListener('resize', () => {
-    if (state.image) { resizeCanvasToImage(state.image); draw(); }
-  });
-
-  /* --- Качество фото ------------------------------------------------------- */
   const renderQuality = (warnings) => {
-    if (!qualityBox) return;
-    const quality = state.photo && state.photo.quality_score;
-    const pct = Math.round((quality || 0) * 100);
+    if (!qualityBox || !state.photo) return;
+    const pct = Math.round((state.photo.quality_score || 0) * 100);
     const level = pct >= 75 ? 'ok' : pct >= 50 ? 'warn' : 'bad';
     const label = pct >= 75 ? 'Хорошее качество' : pct >= 50 ? 'Среднее качество' : 'Низкое качество';
     qualityBox.hidden = false;
     qualityBox.className = `quality-report is-${level}`;
     qualityBox.innerHTML =
-      (state.photo && state.photo.is_demo
+      (state.photo.is_demo
         ? '<p class="demo-note">Демо-режим: детектор лица не установлен, точки синтетические.</p>'
         : '') +
-      `<div class="quality-head"><strong>${label}</strong><span>${pct}%</span></div>` +
+      `<div class="quality-head"><strong>${escapeHtml(label)}</strong><span>${pct}%</span></div>` +
       `<div class="progress"><i style="width:${pct}%"></i></div>` +
       (warnings.length
-        ? `<ul class="quality-warnings">${warnings.map((w) => `<li>${w}</li>`).join('')}</ul>`
+        ? `<ul class="quality-warnings">${warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join('')}</ul>`
         : '');
   };
 
-  /* --- Предпросмотр метрик ------------------------------------------------- */
+  /* --- Предпросмотр метрик -------------------------------------------------- */
+
   const resetPreview = () => {
+    state.preview = null;
     if (previewEmpty) previewEmpty.hidden = false;
     if (previewContent) previewContent.hidden = true;
   };
@@ -342,11 +208,11 @@
     const score = Math.max(0, Math.min(10, m.score));
     return `<li class="metric-item">
       <div class="metric-item-head">
-        <span class="metric-item-label">${m.label}</span>
+        <span class="metric-item-label">${escapeHtml(m.label)}</span>
         <span class="metric-item-score">${score.toFixed(1)}</span>
       </div>
       <div class="progress"><i style="width:${score * 10}%"></i></div>
-      ${m.notes ? `<p class="metric-item-note">${m.notes}</p>` : ''}
+      ${m.notes ? `<p class="metric-item-note">${escapeHtml(m.notes)}</p>` : ''}
     </li>`;
   };
 
@@ -362,7 +228,7 @@
       bars.innerHTML = Object.entries(data.categories)
         .map(([key, value]) => `
           <div class="category-bar">
-            <span class="category-name">${key}</span>
+            <span class="category-name">${escapeHtml(key)}</span>
             <div class="progress"><i style="width:${value * 10}%"></i></div>
             <span class="category-value">${value.toFixed(1)}</span>
           </div>`)
@@ -371,39 +237,19 @@
 
     const strengths = $('[data-strengths]');
     if (strengths) strengths.innerHTML = data.strengths.map(metricItem).join('') || '<li class="muted">—</li>';
-
     const growth = $('[data-growth]');
     if (growth) growth.innerHTML = data.growth.map(metricItem).join('') || '<li class="muted">—</li>';
-
     const disclaimer = $('[data-disclaimer]');
     if (disclaimer) disclaimer.textContent = data.disclaimer;
   };
 
-  const savePoints = async () => {
-    const csrf = window.fm.getCookie('fm_csrf');
-    await fetch(`/api/photos/${state.photo.id}/landmarks`, {
-      method: 'PUT',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(csrf ? { 'X-CSRF-Token': csrf } : {}),
-      },
-      body: JSON.stringify({
-        points: state.points.map((p) => [p.x, p.y]),
-        provider: 'manual',
-        bbox: (state.photo.landmarks && state.photo.landmarks.bbox) || null,
-      }),
-    });
-    state.dirty = false;
-  };
-
-  runBtn.addEventListener('click', async () => {
-    if (!state.photo) return;
+  const runPreview = async () => {
+    if (!state.photo || !runBtn) return;
     runBtn.setAttribute('aria-busy', 'true');
     runBtn.disabled = true;
     try {
-      if (state.dirty) await savePoints();
       const data = await api(`/api/photos/${state.photo.id}/preview`, { method: 'POST' });
+      state.preview = data;
       renderPreview(data);
       $('[data-preview-panel]').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (err) {
@@ -412,7 +258,26 @@
       runBtn.removeAttribute('aria-busy');
       runBtn.disabled = false;
     }
-  });
+  };
+
+  if (runBtn) runBtn.addEventListener('click', runPreview);
+
+  /* --- Студия --------------------------------------------------------------- */
+
+  const openStudio = () => {
+    if (!state.photo || !hasStudio()) return;
+    window.fmStudio.open(state.photo.id, {
+      onDone: async () => {
+        // Разметка сохранена студией — сразу показываем метрики.
+        setActionsEnabled(true);
+        await runPreview();
+      },
+    });
+  };
+
+  if (editBtn) editBtn.addEventListener('click', openStudio);
+
+  /* --- Отчёт ---------------------------------------------------------------- */
 
   if (reportBtn) {
     reportBtn.addEventListener('click', async () => {
@@ -420,7 +285,6 @@
       reportBtn.setAttribute('aria-busy', 'true');
       reportBtn.disabled = true;
       try {
-        if (state.dirty) await savePoints();
         const csrf = window.fm.getCookie('fm_csrf');
         const report = await api(`/api/reports?photo_id=${state.photo.id}`, {
           method: 'POST',
@@ -436,46 +300,18 @@
     });
   }
 
-  if (wizardBtn) {
-    wizardBtn.addEventListener('click', () => {
-      if (!state.photo || !window.fmWizard) return;
-      window.fmWizard.open(state.photo.id, {
-        onSaved: (mesh) => {
-          // Мастер вернул готовый 106-точечный меш — перерисовываем канвас и
-          // помечаем точки как исходные, чтобы «Сбросить» возвращал к разметке.
-          state.points = mesh.points.map(([x, y]) => ({ x, y }));
-          state.originalPoints = state.points.map((p) => ({ ...p }));
-          state.dirty = false;
-          draw();
-          resetPreview();
-        },
-      });
-    });
-  }
+  /* --- Восстановление последнего фото -------------------------------------- */
 
-  resetBtn.addEventListener('click', () => {
-    state.points = state.originalPoints.map((p) => ({ ...p }));
-    state.dirty = true;
-    draw();
-    toast('Точки сброшены к исходным', 'info');
-  });
-
-  /* --- Восстановление последнего фото при заходе --------------------------- */
   (async () => {
     await loadGender();
+    setActionsEnabled(false);
     try {
       const list = await api('/api/photos?limit=1');
       if (!list.items || !list.items.length) return;
       const detail = await api(`/api/photos/${list.items[0].id}`);
       state.photo = detail;
-      state.points = ((detail.landmarks && detail.landmarks.points) || []).map(([x, y]) => ({ x, y }));
-      state.originalPoints = state.points.map((p) => ({ ...p }));
-      await loadImage(detail.image_url);
       renderQuality([]);
-      runBtn.disabled = state.points.length === 0;
-      resetBtn.disabled = state.points.length === 0;
-      if (reportBtn) reportBtn.disabled = state.points.length === 0;
-      if (wizardBtn) wizardBtn.disabled = false;
+      setActionsEnabled(Boolean(detail.landmarks && detail.landmarks.points));
     } catch { /* гость или пусто — ничего не делаем */ }
   })();
 })();

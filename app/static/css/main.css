@@ -349,16 +349,6 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
 
 .rate-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 
-.canvas-wrap { position: relative; }
-.canvas-wrap canvas {
-  width: 100%; height: auto; border-radius: var(--radius-sm);
-  background: var(--surface-2); display: block; touch-action: none; cursor: default;
-}
-.canvas-hint {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  text-align: center; padding: 20px;
-}
-
 .preview-empty { padding: 24px 0; text-align: center; }
 .overall-ring {
   width: 132px; height: 132px; margin: 0 auto 18px; border-radius: 50%;
@@ -907,56 +897,11 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
    Мастер ручной разметки лица (Wizard)
    Полноэкранное модальное окно: слева сцена с фото и оверлеем, справа шаги.
    ========================================================================== */
-.wizard { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 16px; }
-.wizard-backdrop { position: absolute; inset: 0; background: rgba(3, 6, 10, .74); backdrop-filter: blur(3px); }
-.wizard-dialog {
-  position: relative; z-index: 1; width: min(1040px, 100%); max-height: 94vh;
-  display: flex; flex-direction: column; background: var(--surface);
-  border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.wizard-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
-.wizard-title { margin: 0; font-size: 1.05rem; }
-.wizard-close { background: none; border: none; color: var(--fg-muted); font-size: 1.1rem; cursor: pointer; padding: 6px 10px; border-radius: var(--radius-sm); }
-.wizard-close:hover { background: var(--surface-2); color: var(--fg); }
-
-.wizard-body { display: grid; grid-template-columns: 1fr 300px; min-height: 0; flex: 1; }
-.wizard-stage {
-  position: relative; overflow: hidden; background: #05080c; touch-action: none;
-  display: flex; align-items: center; justify-content: center; min-height: 420px;
-  cursor: crosshair;
-}
-.wizard-content { position: relative; transform-origin: center center; will-change: transform; }
-.wizard-image { display: block; max-width: 100%; max-height: 74vh; user-select: none; -webkit-user-drag: none; }
-.wizard-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.wizard-zoom { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
-.wizard-zoom-btn {
-  width: 38px; height: 38px; border-radius: var(--radius-sm); border: 1px solid var(--border);
-  background: rgba(20, 28, 38, .86); color: var(--fg); font-size: 1rem; cursor: pointer;
-}
-.wizard-zoom-btn:hover { background: var(--surface-2); }
-
-.wizard-panel { padding: 18px; border-left: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
-.wizard-progress { display: flex; flex-direction: column; gap: 6px; font-size: .82rem; color: var(--fg-muted); }
-.wizard-progress-track { height: 5px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
-.wizard-progress-track > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s var(--ease); }
-.wizard-step { display: flex; flex-direction: column; gap: 4px; }
-.wizard-dot { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); }
-.wizard-step h3 { margin: 6px 0 0; font-size: 1rem; }
-.wizard-actions { display: flex; gap: 8px; }
-.wizard-actions .btn { flex: 1; }
-
-@media (max-width: 820px) {
-  .wizard { padding: 0; }
-  .wizard-dialog { max-height: 100vh; height: 100%; border-radius: 0; width: 100%; }
-  .wizard-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-  .wizard-panel { border-left: none; border-top: 1px solid var(--border); }
-  .wizard-image { max-height: 52vh; }
-}
-
 /* ==========================================================================
-   Нижняя навигация (мобильные). На десктопе скрыта: там работает верхнее меню.
-   Отступ снизу у main, чтобы панель не перекрывала контент.
+   Нижняя навигация — постоянное меню продукта, как в Telegram.
+   Мобильные: прибита к низу, иконки + подписи.
+   Десктоп: тот же набор превращается в вертикальный рельс слева, чтобы
+   разделы были доступны с любой страницы, а не только на телефоне.
    ========================================================================== */
 .bottom-nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 120;
@@ -967,29 +912,45 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 .bottom-nav-item {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
   padding: 8px 4px 9px; color: var(--fg-muted); font-size: .68rem; text-decoration: none;
-  min-width: 0;
+  min-width: 0; border-radius: var(--radius-sm);
+  transition: color .2s var(--ease);
 }
+.bottom-nav-item:hover { color: var(--fg); }
 .bottom-nav-item.is-active { color: var(--accent); }
-.bottom-nav-icon { font-size: 1.16rem; line-height: 1; }
+/* Иконки — SVG, поэтому размер задаёт сам элемент, а не размер шрифта. */
+.bottom-nav-icon { display: grid; place-items: center; width: 22px; height: 22px; }
+.bottom-nav-icon svg { width: 100%; height: 100%; display: block; }
 .bottom-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 /* Центральная кнопка приподнята: главное действие продукта. */
 .bottom-nav-cta { position: relative; }
 .bottom-nav-cta .bottom-nav-icon {
-  display: grid; place-items: center; width: 44px; height: 44px; margin-top: -18px;
-  border-radius: 50%; background: var(--accent); color: #04121a; font-size: 1.25rem;
+  display: grid; place-items: center; width: 46px; height: 46px; margin-top: -20px;
+  border-radius: 50%; background: var(--accent); color: #04121a;
   box-shadow: 0 6px 18px rgba(79, 209, 197, .38);
+  transition: transform .2s var(--ease);
 }
-.bottom-nav-cta.is-active .bottom-nav-icon { background: var(--accent); }
-.bottom-nav-cta .bottom-nav-label { margin-top: 2px; }
+.bottom-nav-cta .bottom-nav-icon svg { width: 24px; height: 24px; }
+.bottom-nav-cta:active .bottom-nav-icon { transform: scale(.94); }
+.bottom-nav-cta .bottom-nav-label { margin-top: 3px; }
 
-/* Панель видна только на узких экранах. */
 @media (max-width: 900px) {
-  .site-main { padding-bottom: 74px; }
+  .site-main { padding-bottom: 78px; }
 }
+/* Десктоп: вертикальный рельс. Слева освобождаем место под него. */
 @media (min-width: 901px) {
-  .bottom-nav { display: none; }
+  .bottom-nav {
+    top: 0; right: auto; bottom: 0; width: 76px;
+    flex-direction: column; justify-content: flex-start; gap: 4px;
+    padding: calc(env(safe-area-inset-top, 0) + 14px) 8px 14px;
+    border-top: 0; border-right: 1px solid var(--border);
+  }
+  .bottom-nav-item {
+    flex: 0 0 auto; padding: 10px 4px; gap: 5px; font-size: .64rem;
+  }
+  .bottom-nav-cta .bottom-nav-icon { margin-top: 6px; }
+  .site-header, .site-main, .site-footer { margin-left: 76px; }
 }
 
 /* ==========================================================================
@@ -1053,6 +1014,34 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
   100% { transform: scale(1); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) { .mog-banner.is-win { animation: none; } }
+/* Плашка «MOGGED!» на проигравшем: красный текст с чёрной обводкой, без фона.
+   Появляется с наездом и короткой тряской — как клеймо поверх фото. */
+.mog-stamp {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  pointer-events: none; z-index: 3;
+  font-size: clamp(1.5rem, 7vw, 2.6rem); font-weight: 900;
+  letter-spacing: .04em; text-transform: uppercase;
+  color: #ff2d2d;
+  -webkit-text-stroke: 3px #000;
+  paint-order: stroke fill;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .55);
+  animation: mog-stamp-in .62s cubic-bezier(.2, 1.2, .3, 1) both, mog-stamp-shake .5s .3s ease-in-out both;
+}
+@keyframes mog-stamp-in {
+  0% { transform: scale(2.6) rotate(-14deg); opacity: 0; }
+  55% { transform: scale(.92) rotate(3deg); opacity: 1; }
+  75% { transform: scale(1.06) rotate(-1.5deg); }
+  100% { transform: scale(1) rotate(-4deg); opacity: 1; }
+}
+@keyframes mog-stamp-shake {
+  0%, 100% { transform: translateX(0) rotate(-4deg); }
+  20% { transform: translateX(-6px) rotate(-5deg); }
+  40% { transform: translateX(5px) rotate(-3deg); }
+  60% { transform: translateX(-4px) rotate(-5deg); }
+  80% { transform: translateX(3px) rotate(-3deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mog-stamp { animation: none; transform: rotate(-4deg); }
 
 .mog-actions { display: grid; gap: 10px; justify-items: center; margin-top: 16px; }
 .mog-result { margin: 10px 0 0; }
@@ -1134,4 +1123,114 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
 @media (prefers-reduced-motion: reduce) {
   .acc-body { transition: none; }
   .acc-chevron { transition: none; }
+}
+
+/* ==========================================================================
+   Студия оценки — модальное окно на весь экран: совмещение лица, пошаговая
+   разметка и построение меша. Три экрана одного окна, переключаются классом
+   is-* на шаге; вёрстка держит фото по центру, панель управления снизу.
+   ========================================================================== */
+.studio {
+  position: fixed; inset: 0; z-index: 220; display: flex; flex-direction: column;
+  background: #05080c; color: #e8eef4;
+}
+.studio-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px; border-bottom: 1px solid rgba(255, 255, 255, .08);
+  padding-top: calc(10px + env(safe-area-inset-top, 0));
+}
+.studio-steps { display: flex; gap: 6px; flex-wrap: wrap; }
+.studio-step {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .74rem; color: rgba(232, 238, 244, .5);
+  padding: 5px 10px; border-radius: 999px; border: 1px solid transparent;
+}
+.studio-step b {
+  display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%;
+  background: rgba(255, 255, 255, .1); font-size: .68rem; font-weight: 700;
+}
+.studio-step.is-active { color: #4fd1c5; border-color: rgba(79, 209, 197, .45); }
+.studio-step.is-active b { background: #4fd1c5; color: #04121a; }
+.studio-step.is-done { color: rgba(232, 238, 244, .75); }
+.studio-step.is-done b { background: rgba(79, 209, 197, .28); color: #4fd1c5; }
+.studio-close {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, .14); background: transparent;
+  color: inherit; font-size: 1rem; cursor: pointer;
+}
+.studio-close:hover { background: rgba(255, 255, 255, .08); }
+
+.studio-stage {
+  position: relative; flex: 1; min-height: 0; overflow: hidden;
+  display: grid; place-items: center; touch-action: none; cursor: grab;
+}
+.studio-stage:active { cursor: grabbing; }
+.studio-canvas {
+  position: relative; line-height: 0;
+  transform-origin: center center; will-change: transform;
+  transition: transform .38s cubic-bezier(.22, .61, .36, 1);
+}
+.studio-canvas.is-zoomed { transition-duration: .28s; }
+.studio-photo {
+  display: block; max-width: 100%; max-height: 100%;
+  max-height: min(100%, 72vh);
+  user-select: none; -webkit-user-drag: none; pointer-events: none;
+}
+.studio-overlay, .studio-mesh {
+  position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none;
+}
+.studio-mesh { mix-blend-mode: screen; }
+
+.studio-zoombar {
+  position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px;
+}
+.studio-zbtn {
+  width: 38px; height: 38px; border-radius: 10px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(9, 14, 20, .78); color: inherit; font-size: 1rem;
+}
+.studio-zbtn:hover { background: rgba(255, 255, 255, .12); }
+
+.studio-foot {
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0));
+  border-top: 1px solid rgba(255, 255, 255, .08);
+  display: grid; gap: 10px; background: rgba(9, 14, 20, .92);
+}
+.studio-hint { margin: 0; font-size: .86rem; color: rgba(232, 238, 244, .82); }
+.studio-hint strong { color: #fff; }
+.studio-dot {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  margin-right: 7px; vertical-align: middle;
+}
+.studio-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.studio-actions .btn-primary { flex: 1; min-width: 200px; }
+.studio-progress { display: flex; align-items: center; gap: 10px; }
+.studio-progress-track {
+  flex: 1; height: 4px; border-radius: 999px; background: rgba(255, 255, 255, .12); overflow: hidden;
+}
+.studio-progress-track > i {
+  display: block; height: 100%; background: #4fd1c5; transition: width .25s var(--ease);
+}
+.studio-progress-count { font-size: .76rem; color: rgba(232, 238, 244, .6); }
+.studio-nudge { display: grid; gap: 4px; justify-items: center; }
+.studio-nudge-row { display: flex; gap: 4px; }
+.studio-nudge-btn {
+  width: 42px; height: 34px; border-radius: 8px; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, .16);
+  background: rgba(255, 255, 255, .06); color: inherit; font-size: .8rem;
+}
+.studio-nudge-btn:hover { background: rgba(255, 255, 255, .14); }
+.studio-nudge-btn:active { background: rgba(79, 209, 197, .3); }
+
+@media (min-width: 901px) {
+  .studio-foot {
+    grid-template-columns: 1fr auto; align-items: center;
+  }
+  .studio-foot .studio-hint { grid-column: 1; }
+  .studio-foot .studio-actions { grid-column: 2; }
+  .studio-foot .studio-progress { grid-column: 1 / -1; }
+  .studio-foot .studio-nudge { grid-column: 1; justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .studio-canvas { transition: none; }
 }

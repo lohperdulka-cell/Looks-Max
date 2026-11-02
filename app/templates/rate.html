@@ -52,31 +52,30 @@
         </div>
 
         <div class="rate-actions">
-          <button class="btn btn-primary" type="button" data-run-preview disabled>
+          <button class="btn btn-primary" type="button" data-open-studio disabled>
+            Разметить лицо
+          </button>
+          <button class="btn btn-ghost" type="button" data-run-preview disabled>
             Рассчитать метрики
           </button>
-          <button class="btn btn-ghost" type="button" data-reset-points disabled>
-            Сбросить точки
-          </button>
-          <button class="btn btn-ghost" type="button" data-open-wizard disabled>
-            Мастер разметки
-          </button>
-          <button class="btn btn-primary" type="button" data-create-report disabled>
+          <button class="btn btn-ghost" type="button" data-create-report disabled>
             Сохранить отчёт
           </button>
         </div>
       </div>
 
       <div class="rate-panel reveal">
-        <h2 class="panel-title">2. Точки лица</h2>
-        <div class="canvas-wrap" data-canvas-wrap>
-          <canvas data-canvas width="520" height="620" aria-label="Редактор точек лица"></canvas>
-          <div class="canvas-hint muted small" data-canvas-hint>
-            Загрузите фото — точки появятся здесь. Их можно перетаскивать мышью или пальцем.
-          </div>
-        </div>
+        <h2 class="panel-title">2. Разметка</h2>
+        <p class="muted small">
+          Совместите лицо с шаблоном и расставьте точки. Разметка открывается
+          сразу после загрузки фото и занимает весь экран.
+        </p>
+        <button class="btn btn-primary btn-block" type="button" data-open-studio disabled>
+          Открыть студию разметки
+        </button>
         <p class="hint">
-          Тяните точки, чтобы поправить посадку. Изменения применяются к предпросмотру сразу.
+          Точки можно поправить в любой момент: студия запоминает уже
+          расставленное и начинает с первой свободной точки.
         </p>
       </div>
 
@@ -104,8 +103,6 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/face-overlay.js" defer></script>
-<script src="/static/js/scan-anim.js" defer></script>
-<script src="/static/js/wizard.js" defer></script>
+<script src="/static/js/studio.js" defer></script>
 <script src="/static/js/rate.js" defer></script>
 {% endblock %}
