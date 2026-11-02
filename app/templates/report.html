@@ -61,76 +61,117 @@
         </article>
       </div>
 
-      <article class="card reveal">
-        <h2 class="panel-title">Шкалы метрик</h2>
-        <p class="muted small">
-          Градиент от красного к зелёному: маркер показывает, где на шкале
-          находится ваше значение.
-        </p>
-        <div data-gauge-list></div>
-      </article>
+      <section class="card acc reveal" data-accordion data-acc-id="gauges">
+        <button class="acc-head" type="button" data-acc-toggle aria-expanded="false">
+          <span class="acc-titles">
+            <span class="panel-title acc-title">Шкалы метрик</span>
+            <span class="muted small acc-hint">где ваше значение на шкале по каждой метрике</span>
+          </span>
+          <span class="acc-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="acc-body" data-acc-body><div class="acc-body-inner">
+          <p class="muted small">
+            Градиент от красного к зелёному: маркер показывает, где на шкале
+            находится ваше значение.
+          </p>
+          <div data-gauge-list></div>
+        </div></div>
+      </section>
 
-      <article class="card reveal">
-        <h2 class="panel-title">Метрики на фото</h2>
-        <p class="muted small">
-          Для каждой метрики — то же фото с разметкой: линии, углы и пунктиры
-          показывают, что именно измерено.
-        </p>
-        <div class="metric-gallery-nav">
-          <button class="btn btn-ghost btn-sm" type="button" data-gallery-prev>← Назад</button>
-          <span class="metric-gallery-counter" data-gallery-counter>1 / 1</span>
-          <button class="btn btn-ghost btn-sm" type="button" data-gallery-next>Вперёд →</button>
-        </div>
-        <div class="metric-thumbs" data-gallery-thumbs></div>
-        <div class="metric-gallery" data-metric-gallery></div>
-      </article>
+      <section class="card acc reveal" data-accordion data-acc-id="gallery">
+        <button class="acc-head" type="button" data-acc-toggle aria-expanded="false">
+          <span class="acc-titles">
+            <span class="panel-title acc-title">Метрики на фото</span>
+            <span class="muted small acc-hint">разметка: что именно измерено на снимке</span>
+          </span>
+          <span class="acc-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="acc-body" data-acc-body><div class="acc-body-inner">
+          <p class="muted small">
+            Для каждой метрики — то же фото с разметкой: линии, углы и пунктиры
+            показывают, что именно измерено.
+          </p>
+          <div class="metric-gallery-nav">
+            <button class="btn btn-ghost btn-sm" type="button" data-gallery-prev>← Назад</button>
+            <span class="metric-gallery-counter" data-gallery-counter>1 / 1</span>
+            <button class="btn btn-ghost btn-sm" type="button" data-gallery-next>Вперёд →</button>
+          </div>
+          <div class="metric-thumbs" data-gallery-thumbs></div>
+          <div class="metric-gallery" data-metric-gallery></div>
+        </div></div>
+      </section>
 
-      <article class="card reveal">
-        <h2 class="panel-title">Все метрики</h2>
-        <div class="table-wrap">
-          <table class="data-table" data-metrics-table>
-            <thead>
-              <tr>
-                <th>Метрика</th><th>Категория</th><th>Значение</th><th>Эталон</th>
-                <th>Отклонение</th><th>Допуск</th><th>z</th><th>Балл</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </article>
+      <section class="card acc reveal" data-accordion data-acc-id="table">
+        <button class="acc-head" type="button" data-acc-toggle aria-expanded="false">
+          <span class="acc-titles">
+            <span class="panel-title acc-title">Все метрики</span>
+            <span class="muted small acc-hint">значение, эталон, отклонение, z, балл</span>
+          </span>
+          <span class="acc-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="acc-body" data-acc-body><div class="acc-body-inner">
+          <div class="table-wrap">
+            <table class="data-table" data-metrics-table>
+              <thead>
+                <tr>
+                  <th>Метрика</th><th>Категория</th><th>Значение</th><th>Эталон</th>
+                  <th>Отклонение</th><th>Допуск</th><th>z</th><th>Балл</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div></div>
+      </section>
 
-      <article class="card reveal" data-computation-card hidden>
-        <h2 class="panel-title">Как посчитан итог</h2>
-        <p class="muted small" data-computation-formula></p>
-        <div class="table-wrap">
-          <table class="data-table" data-contributions-table>
-            <thead>
-              <tr>
-                <th>Категория</th><th>Балл</th><th>Вес</th>
-                <th>Вклад (балл × вес)</th><th>Доля</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <h3 class="sub-title">Переменные расчёта</h3>
-        <p class="muted small">
-          Промежуточные величины, из которых собраны метрики. Все длины
-          нормированы на ширину или высоту лица.
-        </p>
-        <div class="table-wrap">
-          <table class="data-table" data-variables-table>
-            <thead><tr><th>Переменная</th><th>Обозначение</th><th>Значение</th></tr></thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </article>
+      <section class="card acc reveal" data-accordion data-acc-id="computation"
+               data-computation-card hidden>
+        <button class="acc-head" type="button" data-acc-toggle aria-expanded="false">
+          <span class="acc-titles">
+            <span class="panel-title acc-title">Как посчитан итог</span>
+            <span class="muted small acc-hint">формула, вклад категорий и переменные расчёта</span>
+          </span>
+          <span class="acc-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="acc-body" data-acc-body><div class="acc-body-inner">
+          <p class="muted small" data-computation-formula></p>
+          <div class="table-wrap">
+            <table class="data-table" data-contributions-table>
+              <thead>
+                <tr>
+                  <th>Категория</th><th>Балл</th><th>Вес</th>
+                  <th>Вклад (балл × вес)</th><th>Доля</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <h3 class="sub-title">Переменные расчёта</h3>
+          <p class="muted small">
+            Промежуточные величины, из которых собраны метрики. Все длины
+            нормированы на ширину или высоту лица.
+          </p>
+          <div class="table-wrap">
+            <table class="data-table" data-variables-table>
+              <thead><tr><th>Переменная</th><th>Обозначение</th><th>Значение</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div></div>
+      </section>
 
-      <article class="card reveal">
-        <h2 class="panel-title">Рекомендации</h2>
-        <div class="recommendations" data-recommendations></div>
-      </article>
+      <section class="card acc is-open reveal" data-accordion data-acc-id="recommendations">
+        <button class="acc-head" type="button" data-acc-toggle aria-expanded="true">
+          <span class="acc-titles">
+            <span class="panel-title acc-title">Рекомендации</span>
+            <span class="muted small acc-hint">что делать по зонам роста</span>
+          </span>
+          <span class="acc-chevron" aria-hidden="true"></span>
+        </button>
+        <div class="acc-body" data-acc-body><div class="acc-body-inner">
+          <div class="recommendations" data-recommendations></div>
+        </div></div>
+      </section>
 
       <p class="disclaimer muted small" data-disclaimer></p>
     </div>

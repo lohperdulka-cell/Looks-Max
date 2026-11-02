@@ -344,6 +344,22 @@
     }
   };
 
+  /* --- Аккордеоны секций отчёта ------------------------------------------- */
+  // Кнопка-заголовок сама держит состояние: класс на секции и aria-expanded
+  // должны совпадать, иначе скринридер объявит секцию открытой, когда она
+  // свёрнута. Enter и Space обрабатывает сам <button>.
+  const initAccordions = () => {
+    $$('[data-accordion]').forEach((acc) => {
+      const toggle = acc.querySelector('[data-acc-toggle]');
+      if (!toggle) return;
+      toggle.addEventListener('click', () => {
+        const open = !acc.classList.contains('is-open');
+        acc.classList.toggle('is-open', open);
+        toggle.setAttribute('aria-expanded', String(open));
+      });
+    });
+  };
+
   const render = (report) => {
     loading.hidden = true;
     root.hidden = false;
@@ -380,6 +396,7 @@
     renderRecommendations(report.recommendations);
     renderCharts(report);
     updateShareBox(report);
+    initAccordions();
 
     if (isPublic) return;
     const pdf = $('[data-export-pdf]');

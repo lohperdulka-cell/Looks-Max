@@ -1103,3 +1103,35 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
 .heat-cell.lvl-4 { background: var(--accent); }
 .heatmap-legend { display: flex; align-items: center; gap: 6px; }
 .heatmap-legend .heat-cell { width: 14px; height: 14px; aspect-ratio: auto; }
+
+/* ==========================================================================
+   Аккордеоны отчёта: секции свёрнуты, кроме рекомендаций.
+   ========================================================================== */
+.acc { padding: 0; overflow: hidden; }
+.acc-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  width: 100%; padding: 20px; text-align: left; cursor: pointer;
+  background: none; border: 0; color: inherit; font: inherit;
+}
+.acc-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.acc-titles { display: grid; gap: 4px; min-width: 0; }
+.acc-title { margin: 0; }
+.acc-hint { display: block; }
+.acc-chevron {
+  flex: 0 0 auto; width: 11px; height: 11px;
+  border-right: 2px solid var(--fg-muted); border-bottom: 2px solid var(--fg-muted);
+  transform: rotate(45deg); transition: transform .25s var(--ease);
+}
+.acc.is-open .acc-chevron { transform: rotate(-135deg); }
+/* Анимация раскрытия через grid-template-rows: 0fr -> 1fr. Приём требует
+   РОВНО одного дочернего элемента, поэтому содержимое обёрнуто в .acc-body-inner. */
+.acc-body {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .3s var(--ease);
+}
+.acc-body-inner { overflow: hidden; min-height: 0; padding: 0 20px 20px; }
+.acc.is-open .acc-body { grid-template-rows: 1fr; }
+@media (prefers-reduced-motion: reduce) {
+  .acc-body { transition: none; }
+  .acc-chevron { transition: none; }
+}
