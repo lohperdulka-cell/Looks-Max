@@ -93,6 +93,59 @@ class BeforeAfterOut(BaseModel):
     metrics: list[CompareMetric] = Field(default_factory=list)
 
 
+class LevelOut(BaseModel):
+    """Уровень и прогресс до следующего."""
+
+    level: int
+    title: str
+    xp: int
+    xp_into_level: int
+    xp_for_next: int
+    progress: float
+
+
+class XpSourceOut(BaseModel):
+    """Источник опыта: название, количество действий и начисленный XP."""
+
+    code: str
+    label: str
+    count: int
+    xp: int
+
+
+class QuestOut(BaseModel):
+    """Ежедневное задание с прогрессом."""
+
+    code: str
+    title: str
+    description: str
+    target: int
+    done: int
+    completed: bool
+    xp_reward: int
+
+
+class ActivityDayOut(BaseModel):
+    """Активность за день для карты вклада."""
+
+    day: date
+    total: int
+    intensity: int
+    breakdown: dict[str, int] = Field(default_factory=dict)
+
+
+class GamificationOut(BaseModel):
+    """Сводка геймификации для профиля."""
+
+    level: LevelOut
+    total_xp: int
+    sources: list[XpSourceOut]
+    quests: list[QuestOut]
+    quests_done: int
+    activity: list[ActivityDayOut]
+    active_days: int
+
+
 class ProfileUpdateRequest(BaseModel):
     """Обновление профиля."""
 

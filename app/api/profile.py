@@ -11,15 +11,21 @@ from app.models.report import MetricValue
 from app.models.user import User
 from app.schemas.profile import (
     AchievementOut,
+    ActivityDayOut,
     BeforeAfterOut,
     CompareMetric,
+    GamificationOut,
+    LevelOut,
     ProfileOut,
     ProfileStatsOut,
     ProfileUpdateRequest,
     ProgressOut,
     ProgressPointOut,
+    QuestOut,
+    XpSourceOut,
 )
 from app.services import achievements as achievements_service
+from app.services import gamification as gamification_service
 from app.services import profile as profile_service
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
@@ -194,6 +200,95 @@ async def list_achievements(user: CurrentUser, db: DbSession) -> list[Achievemen
         )
     out.sort(key=lambda a: (not a.earned, a.code))
     return out
+
+
+_XP_LABELS: dict[str, str] = {
+    "photos": "Фото",
+    "reports": "Отчёты",
+    "exercises": "Упражнения",
+    "votes": "Голоса на арене",
+    "mog_wins": "Победы в моггбатлах",
+    "mog_losses": "Участие в дуэлях",
+    "mog_draws": "Ничьи в дуэлях",
+    "streak_days": "Серия активности",
+}
+
+
+def _xp_sources(breakdown: gamification_service.XpBreakdown) -> list[XpSourceOut]:
+    """Разложение XP по источникам, только непустые строки."""
+    rates = {
+        "photos": gamification_service.XP_PHOTO,
+        "reports": gamification_service.XP_REPORT,
+        "exercises": gamification_service.XP_EXERCISE,
+        "votes": gamification_service.XP_VOTE,
+        "mog_wins": gamification_service.XP_MOG_WIN,
+        "mog_losses": gamification_service.XP_MOG_LOSS,
+        "mog_draws": gamification_service.XP_MOG_DRAW,
+        "streak_days": gamification_service.XP_STREAK_DAY,
+    }
+    out: list[XpSourceOut] = []
+    for code, label in _XP_LABELS.items():
+        count = int(getattr(breakdown, code, 0))
+        if count <= 0:
+            continue
+        out.append(XpSourceOut(code=code, label=label, count=count, xp=count * rates[code]))
+    out.sort(key=lambda s: s.xp, reverse=True)
+    return out
+
+
+@router.get("/gamification", response_model=GamificationOut)
+async def get_gamification(user: CurrentUser, db: DbSession) -> GamificationOut:
+    """Уровень, опыт, ежедневные задания и карта активности."""
+    breakdown = await gamification_service.collect_breakdown(db, user)
+    info = gamification_service.level_info(breakdown.total)
+    counts = await gamification_service.today_counts(db, user)
+
+    quests = [
+        QuestOut(
+            code=q.code,
+            title=q.title,
+            description=q.description,
+            target=q.target,
+            done=min(counts.get(q.metric, 0), q.target),
+            completed=counts.get(q.metric, 0) >= q.target,
+            xp_reward=q.xp_reward,
+        )
+        for q in gamification_service.DAILY_QUESTS
+    ]
+
+    series = await gamification_service.activity_series(db, user, days=30)
+    activity = [
+        ActivityDayOut(
+            day=d.day,
+            total=d.total,
+            intensity=d.intensity,
+            breakdown={
+                "photos": d.photos,
+                "reports": d.reports,
+                "exercises": d.exercises,
+                "votes": d.votes,
+                "mog": d.mog,
+            },
+        )
+        for d in series
+    ]
+
+    return GamificationOut(
+        level=LevelOut(
+            level=info.level,
+            title=info.title,
+            xp=info.xp,
+            xp_into_level=info.xp_into_level,
+            xp_for_next=info.xp_for_next,
+            progress=info.progress,
+        ),
+        total_xp=breakdown.total,
+        sources=_xp_sources(breakdown),
+        quests=quests,
+        quests_done=sum(1 for q in quests if q.completed),
+        activity=activity,
+        active_days=sum(1 for d in activity if d.total > 0),
+    )
 
 
 @router.post("/achievements/sync", response_model=list[AchievementOut])

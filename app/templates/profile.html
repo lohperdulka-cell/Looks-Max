@@ -48,6 +48,44 @@
       </div>
     </article>
 
+    <article class="card reveal" data-level-card>
+      <div class="card-head">
+        <h2 class="panel-title">Уровень</h2>
+        <span class="pill" data-level-title>Новичок</span>
+      </div>
+      <div class="level-head">
+        <span class="level-badge" data-level-number>1</span>
+        <div class="level-meter">
+          <div class="progress progress-lg"><i data-level-bar style="width:0%"></i></div>
+          <p class="muted small" data-level-xp>0 XP</p>
+        </div>
+      </div>
+      <div class="xp-sources" data-xp-sources></div>
+    </article>
+
+    <article class="card reveal" data-quests-card>
+      <div class="card-head">
+        <h2 class="panel-title">Задания на сегодня</h2>
+        <span class="pill" data-quests-progress>0/0</span>
+      </div>
+      <div class="quests" data-quests></div>
+    </article>
+
+    <article class="card reveal" data-activity-card>
+      <div class="card-head">
+        <h2 class="panel-title">Активность за 30 дней</h2>
+        <span class="muted small" data-activity-summary></span>
+      </div>
+      <div class="heatmap" data-heatmap role="img" aria-label="Карта активности за 30 дней"></div>
+      <div class="heatmap-legend muted small">
+        <span>меньше</span>
+        <i class="heat-cell lvl-0"></i><i class="heat-cell lvl-1"></i>
+        <i class="heat-cell lvl-2"></i><i class="heat-cell lvl-3"></i>
+        <i class="heat-cell lvl-4"></i>
+        <span>больше</span>
+      </div>
+    </article>
+
     <article class="card reveal">
       <h2 class="panel-title">Достижения</h2>
       <div class="achievements" data-achievements></div>

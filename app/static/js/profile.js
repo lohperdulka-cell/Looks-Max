@@ -7,6 +7,7 @@
   const $ = (s, r = document) => r.querySelector(s);
   const api = window.fmApi;
   const toast = window.fmToast;
+  const escapeHtml = window.fmEscape;
   if (!api || !$('[data-achievements]')) return;
 
   const progressChart = { instance: null };
@@ -123,6 +124,71 @@
       </div>`;
   };
 
+  const renderGamification = (data) => {
+    // Уровень
+    const titleEl = $('[data-level-title]');
+    if (titleEl) titleEl.textContent = data.level.title;
+    const numEl = $('[data-level-number]');
+    if (numEl) numEl.textContent = data.level.level;
+    const barEl = $('[data-level-bar]');
+    if (barEl) barEl.style.width = `${Math.round(data.level.progress * 100)}%`;
+    const xpEl = $('[data-level-xp]');
+    if (xpEl) {
+      xpEl.textContent = data.level.xp_for_next > 0
+        ? `${data.level.xp} XP · до следующего уровня ${data.level.xp_for_next} XP`
+        : `${data.level.xp} XP · максимальный уровень`;
+    }
+
+    const sources = $('[data-xp-sources]');
+    if (sources) {
+      sources.innerHTML = data.sources.length
+        ? data.sources
+            .map((s) => `
+              <div class="xp-row">
+                <span class="xp-label">${escapeHtml(s.label)}</span>
+                <span class="xp-count">×${s.count}</span>
+                <span class="xp-value">+${s.xp}</span>
+              </div>`)
+            .join('')
+        : '<p class="muted small">Пока нет опыта — загрузите фото или создайте отчёт.</p>';
+    }
+
+    // Ежедневные задания
+    const questBox = $('[data-quests]');
+    if (questBox) {
+      questBox.innerHTML = data.quests
+        .map((q) => {
+          const pct = Math.round((q.done / q.target) * 100);
+          return `
+            <div class="quest ${q.completed ? 'is-done' : ''}">
+              <span class="quest-title">${q.completed ? '✓ ' : ''}${escapeHtml(q.title)}</span>
+              <span class="quest-reward">+${q.xp_reward}</span>
+              <span class="quest-desc muted small">${escapeHtml(q.description)}</span>
+              <span class="quest-progress">
+                <span class="progress"><i style="width:${pct}%"></i></span>
+                <span class="muted small">${q.done}/${q.target}</span>
+              </span>
+            </div>`;
+        })
+        .join('');
+    }
+    const questsProgress = $('[data-quests-progress]');
+    if (questsProgress) questsProgress.textContent = `${data.quests_done}/${data.quests.length}`;
+
+    // Карта активности
+    const heat = $('[data-heatmap]');
+    if (heat) {
+      heat.innerHTML = data.activity
+        .map((d) => {
+          const label = new Date(d.day).toLocaleDateString('ru-RU');
+          return `<i class="heat-cell lvl-${d.intensity}" title="${label}: действий ${d.total}"></i>`;
+        })
+        .join('');
+    }
+    const summary = $('[data-activity-summary]');
+    if (summary) summary.textContent = `активных дней: ${data.active_days} из ${data.activity.length}`;
+  };
+
   const renderAchievements = (items) => {
     const box = $('[data-achievements]');
     if (!box) return;
@@ -169,16 +235,18 @@
 
   const loadAll = async () => {
     try {
-      const [profile, achievements, reports, beforeAfter] = await Promise.all([
+      const [profile, achievements, reports, beforeAfter, gamification] = await Promise.all([
         api('/api/profile'),
         api('/api/profile/achievements'),
         api('/api/reports?limit=10'),
         api('/api/profile/before-after').catch(() => null),
+        api('/api/profile/gamification').catch(() => null),
       ]);
       renderProfile(profile);
       renderAchievements(achievements);
       renderReports(reports.items);
       renderBeforeAfter(beforeAfter);
+      if (gamification) renderGamification(gamification);
       await loadProgress(Number($('[data-progress-range]').value) || 30);
     } catch (err) {
       toast(err.message || 'Не удалось загрузить профиль', 'error');
