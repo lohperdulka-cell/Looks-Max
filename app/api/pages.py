@@ -173,6 +173,14 @@ async def battles_page(request: Request, user: OptionalUser) -> Response:
     return templates.TemplateResponse(request, "battles.html", _base_context(request, user))
 
 
+@router.get("/mogbattles", response_class=HTMLResponse)
+async def mogbattles_page(request: Request, user: OptionalUser) -> Response:
+    """Страница PvP-моггбатлов: дуэль 1x1 с подбором соперника."""
+    if user is None:
+        return RedirectResponse("/login?next=/mogbattles", status_code=302)
+    return templates.TemplateResponse(request, "mogbattles.html", _base_context(request, user))
+
+
 @router.get("/exercises", response_class=HTMLResponse)
 async def exercises_page(request: Request, user: OptionalUser) -> Response:
     """Страница библиотеки упражнений с прогрессом."""

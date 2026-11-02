@@ -599,7 +599,7 @@ async def test_bottom_nav_present_on_landing(client: AsyncClient) -> None:
     assert resp.status_code == 200
     html = resp.text
     assert 'class="bottom-nav"' in html
-    for href in ("/rate", "/battles", "/exercises", "/profile"):
+    for href in ("/rate", "/mogbattles", "/exercises", "/profile"):
         assert f'href="{href}"' in html
 
 

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Моггбатлы — PvP-дуэли 1x1 — {{ app_name }}{% endblock %}
+{% block description %}Моггбатлы: дуэль один на один. Соперник скрыт до подтверждения готовности, победитель забирает PvP-очки.{% endblock %}
+
+{% block content %}
+<section class="section mog-page">
+  <div class="container">
+    <header class="page-head reveal">
+      <h1>Моггбатлы</h1>
+      <p class="muted">
+        Дуэль один на один. Фото соперника скрыто, пока он не подтвердит
+        готовность. Победитель забирает PvP-очки, проигравший теряет часть своих.
+      </p>
+    </header>
+
+    <div class="mog-layout">
+      <div class="mog-stage reveal" data-mog-stage>
+        <div class="mog-idle" data-mog-idle>
+          <div class="mog-idle-art" aria-hidden="true">⚔</div>
+          <h2>Готовы сразиться?</h2>
+          <p class="muted">
+            Мы подберём соперника с близкими PvP-очками. Нужно публичное фото
+            хорошего качества.
+          </p>
+          <button class="btn btn-primary btn-lg" type="button" data-mog-join>Найти соперника</button>
+        </div>
+      </div>
+
+      <aside class="mog-side reveal">
+        <article class="card">
+          <h2 class="panel-title">Мой профиль</h2>
+          <div class="battle-stats">
+            <div class="battle-stat"><span data-mog-points>0</span><small>PvP-очки</small></div>
+            <div class="battle-stat"><span data-mog-record>0/0</span><small>победы/поражения</small></div>
+            <div class="battle-stat"><span data-mog-rank>—</span><small>место</small></div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2 class="panel-title">Лидерборд</h2>
+          </div>
+          <ol class="leaderboard" data-mog-leaderboard></ol>
+        </article>
+
+        <p class="muted small">
+          Правила: один соперник на дуэль, фото скрыто до готовности,
+          выход из комнаты возможен до подбора соперника.
+        </p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+{# Звук «MOGGED!» синтезируем через Web Audio в JS — не тащим бинарный файл
+   и не зависим от чужой лицензии. #}
+<audio data-mog-sound preload="none"></audio>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/mogbattles.js" defer></script>
+{% endblock %}

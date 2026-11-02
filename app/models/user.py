@@ -43,6 +43,9 @@ class User(TimestampMixin, Base):
 
     # Геймификация
     elo: Mapped[int] = mapped_column(Integer, default=1200, nullable=False)
+    # PvP-очки моггбатлов: отдельная валюта, чтобы дуэли не искажали ELO арены
+    # (там голосуют зрители, здесь — исход один на один).
+    pvp_points: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     streak_days: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     last_activity_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), default=None

@@ -18,6 +18,7 @@ from app.models.exercise import (
     ProgressSnapshot,
     UserAchievement,
 )
+from app.models.mogbattle import MogRoom
 from app.models.photo import Photo
 from app.models.report import MetricValue, Report
 from app.models.user import PasswordResetToken, RefreshToken, User
@@ -38,6 +39,7 @@ __all__ = [
     "LooksmaxPlan",
     "MetricValue",
     "MetricWeight",
+    "MogRoom",
     "PageView",
     "PasswordResetToken",
     "Photo",

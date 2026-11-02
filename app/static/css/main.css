@@ -991,3 +991,72 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
 @media (min-width: 901px) {
   .bottom-nav { display: none; }
 }
+
+/* ==========================================================================
+   Моггбатлы (/mogbattles) — PvP-дуэли 1x1.
+   Сцена слева, сайдбар справа; на узких экранах — в столбик.
+   ========================================================================== */
+.mog-layout { display: grid; gap: 20px; grid-template-columns: 1fr; }
+@media (min-width: 980px) { .mog-layout { grid-template-columns: 1.7fr 1fr; align-items: start; } }
+
+.mog-stage { min-height: 420px; display: grid; place-items: center; }
+.mog-side { display: grid; gap: 16px; }
+
+/* Ожидание соперника / приглашение */
+.mog-idle, .mog-waiting { text-align: center; padding: 40px 16px; }
+.mog-idle-art { font-size: 3rem; opacity: .5; margin-bottom: 8px; }
+.mog-idle h2, .mog-waiting h2 { margin: 0 0 8px; }
+.mog-spinner {
+  width: 46px; height: 46px; margin: 0 auto 18px; border-radius: 50%;
+  border: 3px solid var(--border); border-top-color: var(--accent);
+  animation: mog-spin 1s linear infinite;
+}
+@keyframes mog-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .mog-spinner { animation-duration: 2.4s; } }
+
+/* Дуэль: две карточки и VS между ними */
+.mog-duel { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; width: 100%; }
+.mog-vs { font-weight: 800; font-size: 1.1rem; color: var(--fg-muted); letter-spacing: .08em; }
+.mog-card { text-align: center; }
+.mog-photo-wrap { position: relative; border-radius: 14px; overflow: hidden; background: var(--bg-alt); }
+.mog-photo { display: block; width: 100%; aspect-ratio: 3/4; object-fit: cover; }
+.mog-photo.is-blurred { filter: blur(18px) saturate(.6); transform: scale(1.08); }
+.mog-photo-hidden {
+  display: grid; place-items: center; width: 100%; aspect-ratio: 3/4;
+  font-size: 2.4rem; color: var(--fg-muted); background: var(--bg-alt);
+}
+.mog-score {
+  position: absolute; right: 8px; bottom: 8px; padding: 3px 9px; border-radius: 999px;
+  background: rgba(0,0,0,.62); color: #fff; font-weight: 700; font-size: .82rem;
+}
+.mog-points-delta {
+  position: absolute; left: 8px; top: 8px; padding: 3px 9px; border-radius: 999px;
+  font-weight: 700; font-size: .82rem; color: #04121a;
+}
+.mog-points-delta.is-up { background: var(--accent); }
+.mog-points-delta.is-down { background: var(--danger, #e5534b); color: #fff; }
+.mog-name { margin: 8px 0 4px; font-size: 1rem; }
+.mog-ready-tag { font-size: .76rem; color: var(--fg-muted); }
+.mog-ready-tag.is-ready { color: var(--accent); }
+
+/* Баннер исхода + звук */
+.mog-banner {
+  width: 100%; text-align: center; font-weight: 900; letter-spacing: .04em;
+  font-size: clamp(1.6rem, 6vw, 2.8rem); padding: 10px 0; margin-bottom: 12px;
+}
+.mog-banner.is-win { color: var(--accent); animation: mog-pop .5s ease-out; }
+.mog-banner.is-loss { color: var(--fg-muted); }
+.mog-banner.is-draw { color: var(--fg-muted); }
+@keyframes mog-pop {
+  0% { transform: scale(.7); opacity: 0; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .mog-banner.is-win { animation: none; } }
+
+.mog-actions { display: grid; gap: 10px; justify-items: center; margin-top: 16px; }
+.mog-result { margin: 10px 0 0; }
+@media (max-width: 620px) {
+  .mog-duel { grid-template-columns: 1fr; }
+  .mog-vs { padding: 4px 0; }
+}
