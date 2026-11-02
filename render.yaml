@@ -60,6 +60,11 @@ services:
         sync: false
       - key: RATE_LIMIT_ENABLED
         value: "true"
+      # Render стоит перед приложением как прокси: request.client.host — это
+      # адрес прокси, а не клиента. Без этого флага лимиты по IP вырождаются
+      # в один общий счётчик на всех посетителей.
+      - key: TRUST_PROXY_HEADERS
+        value: "true"
       - key: PYTHON_VERSION
         value: "3.12"
 

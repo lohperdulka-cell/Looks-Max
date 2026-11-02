@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.core import auth_service
+from app.core.client_ip import client_ip
 from app.core.deps import ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, CurrentUser, DbSession
 from app.core.limiter import limiter
 from app.logging_config import get_logger
@@ -86,7 +87,7 @@ async def register(request: Request, payload: RegisterRequest, db: DbSession) ->
         db,
         user,
         user_agent=request.headers.get("user-agent"),
-        ip=request.client.host if request.client else None,
+        ip=client_ip(request),
     )
     body = TokenResponse(access_token=access, refresh_token=refresh).model_dump()
     response = JSONResponse(status_code=status.HTTP_201_CREATED, content=body)
@@ -103,7 +104,7 @@ async def login(request: Request, payload: LoginRequest, db: DbSession) -> JSONR
         db,
         user,
         user_agent=request.headers.get("user-agent"),
-        ip=request.client.host if request.client else None,
+        ip=client_ip(request),
     )
     body = TokenResponse(access_token=access, refresh_token=refresh).model_dump()
     response = JSONResponse(status_code=status.HTTP_200_OK, content=body)
@@ -129,7 +130,7 @@ async def refresh_tokens(
         db,
         raw,
         user_agent=request.headers.get("user-agent"),
-        ip=request.client.host if request.client else None,
+        ip=client_ip(request),
     )
     body = TokenResponse(access_token=access, refresh_token=refresh).model_dump()
     response = JSONResponse(status_code=status.HTTP_200_OK, content=body)

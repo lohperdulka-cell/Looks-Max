@@ -546,3 +546,44 @@ def test_mediapipe_model_download_failure_is_swallowed(tmp_path, monkeypatch):
     monkeypatch.setattr("urllib.request.urlopen", _boom)
 
     assert lm_module._ensure_mediapipe_task_model() is None
+
+
+def _request_with(headers: dict[str, str], client=("1.2.3.4", 1234)):
+    """Собирает минимальный Starlette Request для проверки резолвера IP."""
+    from starlette.requests import Request
+
+    raw = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+    scope = {"type": "http", "headers": raw, "client": client}
+    return Request(scope)
+
+
+def test_client_ip_ignores_xff_by_default() -> None:
+    """Без доверенного прокси X-Forwarded-For игнорируется.
+
+    Иначе клиент подделал бы заголовок и обошёл лимиты по IP.
+    """
+    from app.core.client_ip import client_ip
+
+    req = _request_with({"x-forwarded-for": "9.9.9.9"})
+    assert client_ip(req) == "1.2.3.4"
+
+
+def test_client_ip_uses_rightmost_hop_when_trusted(monkeypatch) -> None:
+    """За доверенным прокси берётся самый правый адрес XFF.
+
+    Прокси дописывает адрес источника в конец списка, поэтому именно он —
+    настоящий клиент; значения левее может подставить сам клиент.
+    """
+    from app.core import client_ip as mod
+
+    monkeypatch.setattr(mod.settings, "trust_proxy_headers", True, raising=False)
+    req = _request_with({"x-forwarded-for": "203.0.113.7, 10.0.0.1"})
+    assert mod.client_ip(req) == "10.0.0.1"
+
+
+def test_client_ip_falls_back_without_xff(monkeypatch) -> None:
+    """Доверенный прокси, но заголовка нет — берём адрес соединения."""
+    from app.core import client_ip as mod
+
+    monkeypatch.setattr(mod.settings, "trust_proxy_headers", True, raising=False)
+    assert mod.client_ip(_request_with({})) == "1.2.3.4"

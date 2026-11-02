@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
     rate_limit_default: str = "120/minute"
     rate_limit_auth: str = "10/minute"
+    # Доверять ли X-Forwarded-For. Включать только когда перед приложением
+    # стоит свой прокси (Render/nginx): тогда IP берётся из заголовка и лимиты
+    # считаются по реальному клиенту. Напрямую с интернета оставлять False —
+    # иначе клиент подделает XFF и обойдёт лимиты.
+    trust_proxy_headers: bool = False
 
     # --- Файлы / загрузка ---
     media_root: Path = BASE_DIR / "data" / "media"
