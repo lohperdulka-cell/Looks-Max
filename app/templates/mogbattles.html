@@ -53,9 +53,10 @@
   </div>
 </section>
 
-{# Звук «MOGGED!» синтезируем через Web Audio в JS — не тащим бинарный файл
-   и не зависим от чужой лицензии. #}
-<audio data-mog-sound preload="none"></audio>
+{# Звук «MOGGED!»: короткий семпл лежит локально, поэтому CSP (default-src
+   'self') его не блокирует, а внешний хостинг и лицензия не нужны. Если
+   браузер запретит воспроизведение, JS тихо откатится на синтез Web Audio. #}
+<audio data-mog-sound preload="auto" src="/static/audio/mogged.wav"></audio>
 {% endblock %}
 
 {% block scripts %}

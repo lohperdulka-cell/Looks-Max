@@ -19,14 +19,36 @@
   let current = null;
   let pollTimer = null;
 
-  /* --- Звук «MOGGED!»: короткий синтезированный аккорд --------------------- */
+  /* --- Звук «MOGGED!» ------------------------------------------------------
+     Играем локальный короткий семпл через HTML5 Audio: файл лежит рядом со
+     статикой, поэтому не зависим от чужого хостинга и лицензии, а CSP
+     (default-src 'self') не блокирует воспроизведение. Если браузер не дал
+     проиграть (например, политика автозапуска), тихо откатываемся на
+     синтезированный удар через Web Audio. */
   const playMogged = () => {
+    const el = document.querySelector('[data-mog-sound]');
+    if (el) {
+      try {
+        el.currentTime = 0;
+        const played = el.play();
+        if (played && typeof played.catch === 'function') {
+          played.catch(() => synthMogged());
+        }
+        return;
+      } catch {
+        /* нет элемента или браузер запретил — синтезируем */
+      }
+    }
+    synthMogged();
+  };
+
+  const synthMogged = () => {
     try {
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) return;
       const ctx = new Ctx();
       const now = ctx.currentTime;
-      // Два тона с быстрым спадом — «удар + отзвук», не раздражает при частых дуэлях.
+      // Два тона с быстрым спадом — «удар + отзвук».
       [220, 330].forEach((freq, i) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
@@ -51,11 +73,15 @@
     }
   };
 
-  const sideCard = (side, reveal) => {
+  const sideCard = (side, reveal, outcome) => {
     const name = escapeHtml(side.name);
     const img = side.image_url
       ? `<img src="${side.image_url}" alt="Фото: ${name}" class="mog-photo${reveal ? '' : ' is-blurred'}">`
       : `<div class="mog-photo mog-photo-hidden" aria-hidden="true">?</div>`;
+    // Плашка «MOGGED!» — только на проигравшем, без фона и врезки.
+    const stamp = outcome === 'lost'
+      ? '<div class="mog-stamp" data-mog-stamp aria-hidden="true">MOGGED!</div>'
+      : '';
     const badge = reveal && side.score != null
       ? `<span class="mog-score">${side.score.toFixed(2)}</span>`
       : '';
@@ -66,8 +92,8 @@
       ? `<span class="mog-points-delta ${side.points > 0 ? 'is-up' : 'is-down'}">${side.points > 0 ? '+' : ''}${side.points}</span>`
       : '';
     return `
-      <article class="mog-card ${reveal ? 'is-revealed' : ''}">
-        <div class="mog-photo-wrap">${img}${badge}${points}</div>
+      <article class="mog-card ${reveal ? 'is-revealed' : ''}${outcome ? ` is-${outcome}` : ''}">
+        <div class="mog-photo-wrap">${img}${badge}${points}${stamp}</div>
         <h3 class="mog-name">${name}</h3>
         ${readyTag}
       </article>`;
@@ -112,6 +138,12 @@
     // revealed
     stopPolling();
     const iWon = room.winner_id && room.me.user_id === room.winner_id;
+    // Плашка «MOGGED!» ставится на проигравшего: победитель видит, кого
+    // переиграл, проигравший — свой приговор. Победитель — всегда «я» или
+    // «соперник», ничьей тут не бывает.
+    const loserIsMe = !iWon;
+    const meCard = sideCard(room.me, true, loserIsMe ? 'lost' : 'won');
+    const oppCard = sideCard(room.opponent, true, loserIsMe ? 'won' : 'lost');
     const banner = room.is_draw
       ? '<div class="mog-banner is-draw">Ничья</div>'
       : iWon
@@ -120,16 +152,16 @@
     stage.innerHTML = `
       ${banner}
       <div class="mog-duel">
-        ${sideCard(room.me, true)}
+        ${meCard}
         <div class="mog-vs" aria-hidden="true">VS</div>
-        ${sideCard(room.opponent, true)}
+        ${oppCard}
       </div>
       <p class="mog-result muted">${escapeHtml(room.result_text)}</p>
       <div class="mog-actions">
         <button class="btn btn-primary" type="button" data-mog-again>Ещё дуэль</button>
       </div>`;
     $('[data-mog-again]').addEventListener('click', joinQueue);
-    if (iWon) playMogged();
+    if (!room.is_draw) playMogged();
     finishRoom(room.room_id);
     loadProfile();
     loadLeaderboard();
