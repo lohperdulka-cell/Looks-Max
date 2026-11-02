@@ -65,21 +65,28 @@ class RawMetrics:
 
     values: dict[str, float] = field(default_factory=dict)
     auxiliary: dict[str, float] = field(default_factory=dict)
+    # Метрики, отброшенные как абсурдные: ключ -> отвергнутое значение.
+    # Отчёт показывает их отдельно, чтобы пропуск метрики не выглядел сбоем.
+    rejected: dict[str, float] = field(default_factory=dict)
 
-    def set(self, key: str, value: float) -> None:
+    def set(self, key: str, value: float) -> float | None:
         """Записывает метрику, если она конечна и физиологически правдоподобна.
 
-        Вне диапазона PLAUSIBLE_RANGES значение отбрасывается с логом: лучше
-        пропустить метрику в отчёте, чем показать бессмыслицу.
+        Возвращает записанное значение либо None, если оно абсурдно (не конечно
+        или вышло за PLAUSIBLE_RANGES). Отброшенное значение запоминается в
+        rejected, чтобы отчёт мог объяснить пропуск, а не молчать о нём.
         """
         if not math.isfinite(value):
             logger.warning("ml.metric.not_finite", metric=key)
-            return
+            self.rejected[key] = float("nan")
+            return None
         lo, hi = PLAUSIBLE_RANGES.get(key, (float("-inf"), float("inf")))
         if not (lo <= value <= hi):
             logger.warning("ml.metric.implausible", metric=key, value=round(value, 4), lo=lo, hi=hi)
-            return
+            self.rejected[key] = float(value)
+            return None
         self.values[key] = float(value)
+        return float(value)
 
     def set_aux(self, key: str, value: float) -> None:
         """Записывает вспомогательную величину (для блока «Переменные расчёта»)."""

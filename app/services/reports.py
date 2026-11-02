@@ -144,6 +144,13 @@ async def create_report(
         categories={item["key"]: item["score"] for item in breakdown},
         summary={
             "missing": result.missing,
+            # Метрики, отброшенные как абсурдные (пиксели вместо пропорций,
+            # сбойные индексы точек): показываем значение, чтобы пропуск был
+            # объяснимым, а не выглядел поломкой отчёта.
+            "rejected": {
+                key: (None if value != value else float(value))
+                for key, value in result.rejected.items()
+            },
             "categories_detail": breakdown,
             "is_demo": photo.landmarks_provider == "demo",
             # Промежуточные величины и вклад категорий: отчёт можно проверить

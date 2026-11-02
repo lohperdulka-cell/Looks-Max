@@ -73,6 +73,8 @@ class ScoreResult:
     overall: float = 0.0
     harmony: float = 0.0
     missing: list[str] = field(default_factory=list)
+    # Метрики, отброшенные как абсурдные: ключ -> отвергнутое значение.
+    rejected: dict[str, float] = field(default_factory=dict)
     model_version: str = "1.0.0"
     # Промежуточные величины геометрии (ширина лица, трети, ipd и т.д.).
     auxiliary: dict[str, float] = field(default_factory=dict)
@@ -127,7 +129,7 @@ def score_metrics(
     weight_overrides = weight_overrides or {}
     enabled = enabled or {}
 
-    result = ScoreResult(auxiliary=dict(raw.auxiliary))
+    result = ScoreResult(auxiliary=dict(raw.auxiliary), rejected=dict(raw.rejected))
     scored: list[MetricScore] = []
 
     for spec in METRIC_SPECS:

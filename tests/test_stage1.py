@@ -217,3 +217,100 @@ def test_relationships_forbid_lazy_sql() -> None:
             if rel.lazy != "raise_on_sql":
                 offenders.append(f"{mapper.class_.__name__}.{rel.key}={rel.lazy}")
     assert not offenders, f"Связи без raise_on_sql: {offenders}"
+
+
+# --- Метрики: абсурдные значения отбрасываются --------------------------------
+
+
+def test_absurd_metric_returns_none_and_is_logged() -> None:
+    """Метрика вне физиологического диапазона не попадает в values.
+
+    set() возвращает None, а само значение уходит в rejected — иначе
+    «63.77» вместо пропорции губ попал бы в отчёт как реальный результат.
+    """
+    from app.ml.metrics import RawMetrics
+
+    raw = RawMetrics()
+    assert raw.set("mouth_proportion", 63.77) is None
+    assert "mouth_proportion" not in raw.values
+    assert raw.rejected["mouth_proportion"] == pytest.approx(63.77)
+
+
+def test_plausible_metric_is_kept() -> None:
+    """Нормальное значение сохраняется и возвращается из set()."""
+    from app.ml.metrics import RawMetrics
+
+    raw = RawMetrics()
+    assert raw.set("mouth_proportion", 1.6) == pytest.approx(1.6)
+    assert raw.values["mouth_proportion"] == pytest.approx(1.6)
+    assert "mouth_proportion" not in raw.rejected
+
+
+def test_nan_metric_is_rejected() -> None:
+    """NaN не проходит проверку конечности и попадает в rejected."""
+    from app.ml.metrics import RawMetrics
+
+    raw = RawMetrics()
+    assert raw.set("golden_ratio", float("nan")) is None
+    assert "golden_ratio" not in raw.values
+
+
+def test_rejected_metrics_reach_score_result() -> None:
+    """Отброшенные метрики доезжают до ScoreResult и попадают в missing."""
+    from app.ml.metrics import RawMetrics
+    from app.ml.scoring import score_metrics
+
+    raw = RawMetrics()
+    raw.set("mouth_proportion", 63.77)
+    result = score_metrics(raw)
+    assert result.rejected.get("mouth_proportion") == pytest.approx(63.77)
+    assert "mouth_proportion" in result.missing
+
+
+def test_metrics_are_scale_invariant() -> None:
+    """Пропорции не зависят от разрешения снимка.
+
+    Если бы метрики считались в пикселях, увеличение кадра (например, с 800x600
+    до 1600x1200) меняло бы результат. Берём ОДНО лицо (одни нормализованные
+    точки) и прогоняем его в двух размерах кадра: все коэффициенты и углы
+    обязаны совпасть.
+    """
+    from app.ml.demo_landmarks import synthetic_bbox, synthetic_points
+
+    img = np.zeros((600, 800, 3), dtype=np.uint8)
+    pts = synthetic_points(img)
+    bbox = synthetic_bbox(pts)
+
+    def raw_for(w: int, h: int):
+        lm = FaceLandmarks(points=pts, provider="demo", image_size=(w, h), bbox=bbox)
+        return compute_raw_metrics(lm, gender="male")
+
+    small = raw_for(800, 600)
+    large = raw_for(1600, 1200)
+
+    assert small.values, "метрики не посчитались"
+    assert set(small.values) == set(large.values)
+    for key, value in small.values.items():
+        assert value == pytest.approx(large.values[key], abs=1e-9), key
+
+
+def test_metrics_are_dimensionless_magnitudes() -> None:
+    """Метрики не выглядят «пиксельными».
+
+    Коэффициенты-отношения и доли держатся в пределах десятков, углы — в
+    0..180 градусов. Значение порядка сотен и тысяч означало бы, что где-то
+    остались пиксели вместо коэффициента (тот самый «63.77»).
+    """
+    from app.ml.demo_landmarks import synthetic_bbox, synthetic_points
+
+    img = np.zeros((600, 480, 3), dtype=np.uint8)
+    pts = synthetic_points(img)
+    lm = FaceLandmarks(points=pts, provider="demo", image_size=(480, 600), bbox=synthetic_bbox(pts))
+    raw = compute_raw_metrics(lm, gender="male")
+
+    angles = {"canthal_tilt", "brow_tilt", "gonial_angle"}
+    for key, value in raw.values.items():
+        if key in angles:
+            assert 0.0 <= value <= 180.0, f"{key}={value} вне диапазона углов"
+        else:
+            assert value < 30.0, f"{key}={value} похоже на пиксельную величину"
