@@ -214,8 +214,19 @@ async def get_photo(photo_id: int, user: CurrentUser, db: DbSession) -> PhotoDet
 
 @router.get("/{photo_id}/image")
 async def get_photo_image(photo_id: int, user: CurrentUser, db: DbSession) -> FileResponse:
-    """Отдаёт файл изображения владельцу (защита от IDOR)."""
-    photo = await _get_owned_photo(db, photo_id, user)
+    """Отдаёт файл изображения.
+
+    Владельцу — всегда; админу — для модерации; остальным — только если фото
+    отмечено публичным для батлов (иначе чужие картинки недоступны). Прямые
+    приватные фото по-прежнему отдают 404: наличие не раскрываем.
+    """
+    photo = await db.get(Photo, photo_id)
+    if photo is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Фото не найдено")
+    is_owner = photo.user_id == user.id
+    is_public = photo.is_public_in_battles and not photo.is_hidden
+    if not (is_owner or user.is_admin or is_public):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Фото не найдено")
     path = resolve_media_path(photo.storage_path)
     if not path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Файл недоступен")

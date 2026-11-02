@@ -355,3 +355,35 @@ async def test_log_error_truncates_long_payload(db_session) -> None:
     )
     assert len(entry.message) == 4000
     assert len(entry.traceback) == 8000
+
+
+async def test_admin_can_view_any_photo_image(admin_client: AsyncClient, db_session) -> None:
+    """Админ видит картинку в очереди модерации.
+
+    Очередь /api/admin/photos отдаёт image_url чужого фото, а /image раньше
+    пускал только владельца — админ получал 404 и модерировал вслепую.
+    """
+    from app.core.storage import resolve_media_path
+    from app.models.photo import Photo
+
+    owner = await _register_via_new_client("moderated_user", db_session)
+    photo = Photo(
+        user_id=owner.id,
+        storage_path=f"users/{owner.id}/mod.png",
+        content_type="image/png",
+        size_bytes=64,
+        width=600,
+        height=800,
+        is_public_in_battles=False,
+    )
+    db_session.add(photo)
+    await db_session.commit()
+    await db_session.refresh(photo)
+
+    path = resolve_media_path(photo.storage_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    resp = await admin_client.get(f"/api/photos/{photo.id}/image")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("image/")

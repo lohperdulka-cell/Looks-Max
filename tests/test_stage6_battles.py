@@ -217,3 +217,37 @@ async def test_constants_are_sane() -> None:
     assert VOTES_TO_WIN >= 1
     assert DAILY_VOTE_LIMIT > 0
     assert issubclass(BattleError, Exception)
+
+
+async def test_opponent_photo_image_is_reachable(
+    client: AsyncClient, db_session, two_users_with_photos
+) -> None:
+    """Фото соперника должно открываться в батле.
+
+    Раньше /api/photos/{id}/image отдавал файл только владельцу, поэтому
+    картинка чужого участника батла возвращала 404 и батл был неиграбельным
+    (на экране оставалась битая картинка).
+    """
+    _users, _photo_one, photo_two = two_users_with_photos
+    from app.core.storage import resolve_media_path
+
+    path = resolve_media_path(photo_two.storage_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n")
+
+    await _register(client, "voter_view")  # логинимся третьим
+    resp = await client.get(f"/api/photos/{photo_two.id}/image")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("image/")
+
+
+async def test_private_photo_image_still_hidden(
+    client: AsyncClient, db_session, two_users_with_photos
+) -> None:
+    """Приватное чужое фото по-прежнему отдаёт 404 (защита от IDOR)."""
+    _users, _photo_one, photo_two = two_users_with_photos
+    photo_two.is_public_in_battles = False
+    await db_session.commit()
+    await _register(client, "voter_priv")
+    resp = await client.get(f"/api/photos/{photo_two.id}/image")
+    assert resp.status_code == 404
