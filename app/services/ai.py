@@ -182,8 +182,9 @@ def build_offline_answer(question: str, context: ReportContext, exercises: list)
 
 
 def _history_for_llm(messages: list[ChatMessage]) -> list[dict[str, str]]:
-    """Готовит историю диалога для LLM (последние 12 сообщений)."""
-    tail = messages[-12:]
+    """Готовит историю диалога для LLM (последние llm_history_messages сообщений)."""
+    limit = max(0, settings.llm_history_messages)
+    tail = messages[-limit:] if limit else []
     return [{"role": m.role, "content": m.content} for m in tail if m.role in {"user", "assistant"}]
 
 
@@ -196,27 +197,29 @@ async def _stream_llm(
     context = await load_report_context(db, user.id)
     history = _history_for_llm(session.messages)
 
-    client = AsyncOpenAI(
+    # Клиент держит HTTP-пул соединений; закрываем его по выходу, иначе каждый
+    # запрос оставлял бы висящие сокеты до сборки мусора.
+    async with AsyncOpenAI(
         api_key=settings.llm_api_key,
         base_url=settings.llm_base_url,
         timeout=settings.llm_timeout_seconds,
-    )
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "system", "content": context.as_prompt_block()},
-        *history,
-        {"role": "user", "content": question},
-    ]
-    stream = await client.chat.completions.create(
-        model=settings.llm_model,
-        messages=messages,
-        max_tokens=settings.llm_max_tokens,
-        stream=True,
-    )
-    async for chunk in stream:
-        delta = chunk.choices[0].delta.content if chunk.choices else None
-        if delta:
-            yield delta
+    ) as client:
+        messages = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": context.as_prompt_block()},
+            *history,
+            {"role": "user", "content": question},
+        ]
+        stream = await client.chat.completions.create(
+            model=settings.llm_model,
+            messages=messages,
+            max_tokens=settings.llm_max_tokens,
+            stream=True,
+        )
+        async for chunk in stream:
+            delta = chunk.choices[0].delta.content if chunk.choices else None
+            if delta:
+                yield delta
 
 
 async def stream_answer(

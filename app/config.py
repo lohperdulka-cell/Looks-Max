@@ -107,6 +107,10 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     llm_timeout_seconds: float = 60.0
     llm_max_tokens: int = 1200
+    # Сколько последних сообщений диалога уходит в промпт. Без потолка сессия
+    # растёт бесконечно и каждый новый вопрос отправлял бы всю историю —
+    # линейный рост стоимости запроса к LLM.
+    llm_history_messages: int = 12
 
     # --- Внешние сервисы (опционально) ---
     sentry_dsn: str = ""

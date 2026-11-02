@@ -336,3 +336,36 @@ def test_json_event_format() -> None:
     assert event.startswith("event: delta\n")
     payload = json.loads(event.split("data: ", 1)[1].strip())
     assert payload == {"text": "привет"}
+
+
+def test_history_for_llm_is_capped(monkeypatch) -> None:
+    """В промпт уходит только последние N сообщений.
+
+    Без потолка каждый новый вопрос отправлял бы всю историю диалога —
+    линейный рост стоимости запроса к LLM и лимита контекста.
+    """
+    from app.models.chat import ChatMessage
+
+    monkeypatch.setattr(ai_service.settings, "llm_history_messages", 4, raising=False)
+    messages = [
+        ChatMessage(session_id=1, role="user" if i % 2 == 0 else "assistant", content=f"m{i}")
+        for i in range(20)
+    ]
+    history = ai_service._history_for_llm(messages)
+    assert len(history) == 4
+    assert [h["content"] for h in history] == ["m16", "m17", "m18", "m19"]
+
+
+async def test_chat_stream_error_is_sanitized(user_client, monkeypatch) -> None:
+    """Сбой стрима не утекает внутренними деталями в SSE-ответ."""
+
+    async def boom(*args, **kwargs):
+        raise RuntimeError("sqlalchemy: relation 'secret_table' does not exist")
+        yield ""  # pragma: no cover
+
+    monkeypatch.setattr(ai_service, "stream_answer", boom)
+    resp = await user_client.post("/api/chat/stream", json={"message": "привет"})
+    assert resp.status_code == 200
+    assert "secret_table" not in resp.text
+    assert "event: error" in resp.text
+    assert "Не удалось получить ответ" in resp.text

@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.core.deps import CurrentUser, DbSession
 from app.core.limiter import limiter
+from app.logging_config import get_logger
 from app.models.chat import ChatSession, LooksmaxPlan
 from app.schemas.chat import (
     ChatMetaOut,
@@ -23,6 +24,7 @@ from app.schemas.chat import (
 from app.services import ai as ai_service
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+logger = get_logger(__name__)
 
 
 async def _owned_session(db: DbSession, session_id: int, user_id: int) -> ChatSession:
@@ -94,7 +96,12 @@ async def stream(
                 collected.append(delta)
                 yield ai_service.json_event("delta", text=delta)
         except Exception as exc:
-            yield ai_service.json_event("error", detail=str(exc))
+            # Полный текст ошибки может содержать SQL/внутренние детали — пишем
+            # его в лог, а клиенту отдаём общую формулировку.
+            logger.warning("chat.stream_failed", user_id=user.id, error=str(exc))
+            yield ai_service.json_event(
+                "error", detail="Не удалось получить ответ. Попробуйте ещё раз."
+            )
 
         answer = "".join(collected).strip()
         if answer:
