@@ -46,6 +46,18 @@ services:
         value: "true"
       - key: LLM_ENABLED
         value: "false"
+      # Почта для сброса пароля. Оставьте пустыми, если письма не нужны:
+      # тогда ссылка сброса пишется в лог, а приложение работает как обычно.
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: MAIL_FROM
+        sync: false
       - key: RATE_LIMIT_ENABLED
         value: "true"
       - key: PYTHON_VERSION

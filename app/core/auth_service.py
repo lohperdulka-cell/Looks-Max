@@ -14,6 +14,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.mail import send_password_reset
 from app.core.security import (
     create_token,
     generate_opaque_token,
@@ -187,7 +188,7 @@ async def revoke_all_user_tokens(db: AsyncSession, user_id: int) -> None:
 
 
 async def create_password_reset(db: AsyncSession, email: str) -> str | None:
-    """Создаёт токен сброса пароля и «отправляет» письмо (заглушка — лог).
+    """Создаёт токен сброса пароля и отправляет письмо со ссылкой.
 
     Возвращает raw-токен, если пользователь найден (для тестов); иначе None.
     Наружу всегда отвечаем одинаково, чтобы не раскрывать наличие email.
@@ -208,8 +209,14 @@ async def create_password_reset(db: AsyncSession, email: str) -> str | None:
     await db.commit()
 
     reset_url = f"{settings.base_url}/reset-password?token={raw}"
-    # TODO(SMTP): заменить на реальную отправку через aiosmtplib при настройке SMTP_*.
-    logger.info("auth.reset.email_stub", user_id=user.id, url=reset_url)
+    # Пользователь найден по email, поэтому адрес не пустой; проверка нужна
+    # для типизации, поле в модели допускает NULL.
+    if user.email:
+        sent = await send_password_reset(user.email, reset_url)
+        if not sent:
+            # SMTP не настроен или упал: ссылка в логе — единственный способ
+            # завершить сброс, поэтому пишем её с явной пометкой.
+            logger.info("auth.reset.email_stub", user_id=user.id, url=reset_url)
     return raw
 
 

@@ -72,7 +72,7 @@ class RefreshToken(Base):
 
 
 class PasswordResetToken(Base):
-    """Токены восстановления пароля. Отправка письма — заглушка (лог в консоль)."""
+    """Токены восстановления пароля. Хранится только хеш токена."""
 
     __tablename__ = "password_reset_tokens"
 

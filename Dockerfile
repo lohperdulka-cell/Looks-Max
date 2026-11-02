@@ -54,12 +54,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Сначала зависимости — кэшируем слой.
+# mail добавлен в оба профиля: aiosmtplib — чистый Python, RSS не растёт,
+# а без него на проде не работает восстановление пароля.
 COPY pyproject.toml README.md ./
 RUN pip install --upgrade pip \
     && case "$INSTALL_EXTRAS" in \
-         full) pip install ".[ml,pdf]" ;; \
-         mp)   pip install ".[mp,pdf]" ;; \
-         *)    pip install . ;; \
+         full) pip install ".[ml,pdf,mail]" ;; \
+         mp)   pip install ".[mp,pdf,mail]" ;; \
+         *)    pip install ".[mail]" ;; \
        esac
 
 COPY . .

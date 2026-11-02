@@ -106,11 +106,14 @@ class Settings(BaseSettings):
     plausible_domain: str = ""
     plausible_script_url: str = "https://plausible.io/js/script.js"
 
-    # --- Почта (заглушка, SMTP подключается позже) ---
+    # --- Почта ---
+    # Без smtp_host письма не отправляются, ссылка сброса уходит в лог.
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_user: str = ""
     smtp_password: str = ""
+    smtp_starttls: bool = True
+    smtp_timeout_seconds: float = 15.0
     mail_from: str = "no-reply@facemetric.local"
 
     # --- Прочее ---
