@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     # --- Файлы / загрузка ---
     media_root: Path = BASE_DIR / "data" / "media"
     max_upload_mb: int = 12
+    # Лимит по числу пикселей, а не по размеру файла: PNG/JPEG сжимаются, и
+    # файл на пару килобайт может развернуться в сотни мегабайт RGB при
+    # декодировании (decompression bomb). Портрет не бывает больше 24 Мп.
+    max_image_pixels: int = 24_000_000
     allowed_image_types: tuple[str, ...] = ("image/jpeg", "image/png", "image/webp")
 
     # --- ML ---

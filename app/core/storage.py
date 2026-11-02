@@ -68,12 +68,29 @@ def validate_image_bytes(data: bytes) -> str:
 
     try:
         with Image.open(io.BytesIO(data)) as img:
+            width, height = img.size
             img.verify()
+    # Pillow сам бросает DecompressionBombError на кадры >~179 Мп: это не
+    # OSError, поэтому без отдельной ветки он уходил бы как 500. Отвечаем 400.
+    except Image.DecompressionBombError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Слишком большое изображение",
+        ) from exc
     except (UnidentifiedImageError, OSError) as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Файл повреждён или не является изображением",
         ) from exc
+
+    # Проверяем размер ДО декодирования: PIL отдаёт ширину/высоту из заголовка,
+    # поэтому «бомба» (маленький файл → гигантский кадр) отсекается, не успев
+    # занять память. У Pillow есть свой порог, но он пропускает кадры до ~179 Мп.
+    if width * height > settings.max_image_pixels:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Слишком большое изображение: {width}×{height}",
+        )
 
     return mime
 

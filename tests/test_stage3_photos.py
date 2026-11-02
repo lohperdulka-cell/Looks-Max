@@ -52,6 +52,44 @@ async def test_upload_rejects_image_without_face(client: AsyncClient) -> None:
     assert "Лицо не найдено" in resp.json()["detail"]
 
 
+def _png_header_bomb(width: int, height: int) -> bytes:
+    """PNG с крошечным телом, но гигантскими размерами в заголовке."""
+    import struct
+    import zlib
+
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(data))
+            + tag
+            + data
+            + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+        )
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", ihdr)
+        + chunk(b"IDAT", zlib.compress(b"\x00" * (width * 3 + 1)))
+        + chunk(b"IEND", b"")
+    )
+
+
+@pytest.mark.parametrize("side", [12000, 20000])
+async def test_upload_rejects_decompression_bomb(client: AsyncClient, side: int) -> None:
+    """Маленький файл с гигантским кадром не должен занимать память.
+
+    115 байт разворачиваются в сотни МБ RGB при декодировании. Оба порога
+    Pillow (предупреждение и исключение) отсекаются как 400, а не 500.
+    """
+    await _register(client, username=f"bomb{side}")
+    data = _png_header_bomb(side, side)
+    assert len(data) < 4096  # «бомба» действительно маленькая
+    files = {"file": ("bomb.png", data, "image/png")}
+    resp = await client.post("/api/photos", files=files)
+    assert resp.status_code == 400
+    assert "большое" in resp.json()["detail"]
+
+
 async def test_photo_list_empty(client: AsyncClient) -> None:
     await _register(client)
     resp = await client.get("/api/photos")
