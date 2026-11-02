@@ -223,6 +223,24 @@ async def test_report_page_renders_for_user(client: AsyncClient, seeded_photo: i
     assert "Отчёт об оценке" in resp.text
 
 
+async def test_export_html_escapes_display_name(client: AsyncClient, seeded_photo: int) -> None:
+    """Имя пользователя не должно становиться разметкой в экспортируемом отчёте.
+
+    Отчёт собирается строковой интерполяцией, поэтому незаэкранированный
+    display_name — это stored XSS в HTML-экспорте и инъекция в PDF.
+    """
+    payload = "<img src=x onerror=alert(1)>"
+    assert (await client.patch("/api/profile", json={"display_name": payload})).status_code == 200
+    report_id = (await client.post(f"/api/reports?photo_id={seeded_photo}")).json()["id"]
+
+    html = (await client.get(f"/api/reports/{report_id}/export/html")).text
+    assert payload not in html
+    assert "&lt;img src=x onerror=alert(1)&gt;" in html
+
+    pdf = await client.get(f"/api/reports/{report_id}/export/pdf")
+    assert pdf.status_code in (200, 503)
+
+
 async def test_report_page_redirects_guest(client: AsyncClient) -> None:
     resp = await client.get("/report", follow_redirects=False)
     assert resp.status_code == 302

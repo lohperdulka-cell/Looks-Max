@@ -6,6 +6,8 @@ WeasyPrint импортируется лениво: тяжёлая систем�
 
 from __future__ import annotations
 
+from html import escape as _esc
+
 from app.logging_config import get_logger
 from app.schemas.reports import MetricOut, ReportOut
 
@@ -36,20 +38,26 @@ def _gauge(score: float) -> str:
 
 
 def _metric_block(m: MetricOut) -> str:
-    """Карточка метрики: шкала, значение, эталон и пояснение."""
-    unit = f" {m.unit}" if m.unit else ""
+    """Карточка метрики: шкала, значение, эталон и пояснение.
+
+    Все текстовые поля экранируются: часть из них (заметки, источники, формулы)
+    попадает в отчёт из констант, но сам отчёт собирается строковой
+    интерполяцией, поэтому незаэкранированный `<` (например, в заметке «<1»)
+    ломает разметку, а пользовательский текст — это уже XSS.
+    """
+    unit = f" {_esc(m.unit)}" if m.unit else ""
     deviation = ""
     if m.deviation is not None and m.reference_value is not None:
         sign = "+" if m.deviation > 0 else ""
         deviation = f" · отклонение {sign}{m.deviation:.2f}"
-    notes = f'<p class="m-note">{m.notes}</p>' if m.notes else ""
-    source = f'<p class="m-src">Источник: {m.source}</p>' if m.source else ""
-    formula = f'<p class="m-formula"><code>{m.formula}</code></p>' if m.formula else ""
+    notes = f'<p class="m-note">{_esc(m.notes)}</p>' if m.notes else ""
+    source = f'<p class="m-src">Источник: {_esc(m.source)}</p>' if m.source else ""
+    formula = f'<p class="m-formula"><code>{_esc(m.formula)}</code></p>' if m.formula else ""
     return f"""
       <div class="metric">
         <div class="m-head">
-          <span class="m-label">{m.label}</span>
-          <span class="m-cat">{m.category_label}</span>
+          <span class="m-label">{_esc(m.label)}</span>
+          <span class="m-cat">{_esc(m.category_label)}</span>
           <span class="m-score" style="color:{_score_color(m.score)}">{m.score:.1f}</span>
         </div>
         {_gauge(m.score)}
@@ -66,7 +74,7 @@ def _category_block(report: ReportOut) -> str:
     return "".join(
         f"""
         <div class="cat">
-          <div class="cat-head"><span>{c.label}</span>
+          <div class="cat-head"><span>{_esc(c.label)}</span>
             <span style="color:{_score_color(c.score)}">{c.score:.1f}</span></div>
           {_gauge(c.score)}
           <p class="cat-sub">{c.metrics_count} метрик · вес {c.weight:.2f}</p>
@@ -83,7 +91,7 @@ def _computation_block(report: ReportOut) -> str:
 
     rows = "".join(
         f"""<tr>
-              <td>{c.label}</td>
+              <td>{_esc(c.label)}</td>
               <td style="color:{_score_color(c.score)};font-weight:600">{c.score:.2f}</td>
               <td>{c.weight:.2f}</td>
               <td>{c.contribution:.3f}</td>
@@ -92,12 +100,12 @@ def _computation_block(report: ReportOut) -> str:
         for c in comp.category_contributions
     )
     variables = "".join(
-        f"""<tr><td>{v.label}</td><td class="muted"><code>{v.key}</code></td>
+        f"""<tr><td>{_esc(v.label)}</td><td class="muted"><code>{_esc(v.key)}</code></td>
                 <td>{v.value:.4f}</td></tr>"""
         for v in comp.variables
     )
     formula = (
-        f'<p class="muted">{comp.overall_formula} → {comp.overall_numerator:.3f} / '
+        f'<p class="muted">{_esc(comp.overall_formula)} → {comp.overall_numerator:.3f} / '
         f"{comp.overall_denominator:.2f}</p>"
         if comp.overall_formula
         else ""
@@ -128,21 +136,23 @@ def render_report_html(report: ReportOut, username: str = "") -> str:
     categories = _category_block(report)
 
     strengths = "".join(
-        f'<li>{m.label} — <strong style="color:{_score_color(m.score)}">{m.score:.1f}</strong></li>'
+        f'<li>{_esc(m.label)} — <strong style="color:{_score_color(m.score)}">'
+        f"{m.score:.1f}</strong></li>"
         for m in report.strengths
     )
     growth = "".join(
-        f'<li>{m.label} — <strong style="color:{_score_color(m.score)}">{m.score:.1f}</strong></li>'
+        f'<li>{_esc(m.label)} — <strong style="color:{_score_color(m.score)}">'
+        f"{m.score:.1f}</strong></li>"
         for m in report.growth
     )
 
     recommendations = "".join(
         f"""
         <div class="rec">
-          <h4>{r.priority}. {r.label}</h4>
-          <p>{r.text}</p>
-          <ul>{"".join(f"<li>{a}</li>" for a in r.actions)}</ul>
-          <p class="src">Источник: {r.source}</p>
+          <h4>{r.priority}. {_esc(r.label)}</h4>
+          <p>{_esc(r.text)}</p>
+          <ul>{"".join(f"<li>{_esc(a)}</li>" for a in r.actions)}</ul>
+          <p class="src">Источник: {_esc(r.source)}</p>
         </div>"""
         for r in report.recommendations
     )
@@ -214,8 +224,8 @@ def render_report_html(report: ReportOut, username: str = "") -> str:
     <div>
       <h1>FaceMetric</h1>
       <p class="muted">Отчёт #{report.id} · {report.created_at:%d.%m.%Y}
-         · модель {report.model_version}</p>
-      {f'<p class="muted">Пользователь: {username}</p>' if username else ""}
+         · модель {_esc(report.model_version)}</p>
+      {f'<p class="muted">Пользователь: {_esc(username)}</p>' if username else ""}
     </div>
     <div style="margin-left:auto;text-align:right">
       <div class="overall" style="color:{_score_color(report.overall_score)}">
@@ -240,13 +250,19 @@ def render_report_html(report: ReportOut, username: str = "") -> str:
   <h2>Рекомендации</h2>
   {recommendations or '<p class="muted">Явных зон роста не выявлено.</p>'}
 
-  <div class="disclaimer">{report.disclaimer}</div>
+  <div class="disclaimer">{_esc(report.disclaimer)}</div>
 </body>
 </html>"""
 
 
 def render_pdf(report: ReportOut, username: str = "") -> bytes:
-    """Рендерит отчёт в PDF. Бросает RuntimeError, если WeasyPrint недоступен."""
+    """Рендерит отчёт в PDF. Бросает RuntimeError, если WeasyPrint недоступен.
+
+    `url_fetcher` запрещает любые внешние/файловые ресурсы: отчёт собирается из
+    локальных данных, а поля вроде имени пользователя контролирует пользователь.
+    Без запрета HTML-инъекция (`<img src="http://...">`) превратилась бы в SSRF —
+    WeasyPrint сам сходил бы по вставленному URL.
+    """
     try:
         from weasyprint import HTML
     except Exception as exc:
@@ -254,4 +270,4 @@ def render_pdf(report: ReportOut, username: str = "") -> bytes:
         raise RuntimeError("Экспорт в PDF недоступен: не установлен WeasyPrint") from exc
 
     html = render_report_html(report, username=username)
-    return HTML(string=html).write_pdf()
+    return HTML(string=html, url_fetcher=lambda *args, **kwargs: None).write_pdf()
