@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
@@ -86,16 +85,3 @@ def hash_token(token: str) -> str:
 def generate_opaque_token(nbytes: int = 32) -> str:
     """Криптостойкий случайный токен (для refresh, сброса пароля, публичных ссылок)."""
     return secrets.token_urlsafe(nbytes)
-
-
-def sign_csrf_token(session_id: str) -> str:
-    """CSRF-токен = HMAC(secret, session_id). Привязывает форму к cookie-сессии."""
-    return hmac.new(
-        settings.secret_key.encode("utf-8"), session_id.encode("utf-8"), hashlib.sha256
-    ).hexdigest()
-
-
-def verify_csrf_token(session_id: str, token: str) -> bool:
-    """Сравнение CSRF-токенов в постоянном времени."""
-    expected = sign_csrf_token(session_id)
-    return hmac.compare_digest(expected, token or "")

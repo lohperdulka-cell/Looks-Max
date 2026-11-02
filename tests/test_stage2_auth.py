@@ -259,6 +259,10 @@ async def test_authenticated_user_redirected_from_login(client: AsyncClient) -> 
 async def test_csrf_token_header_present(client: AsyncClient) -> None:
     resp = await client.post("/api/auth/register", json=REGISTER)
     assert "x-csrf-token" in resp.headers
+    # Заголовок должен нести ровно то значение, что клиент потом пришлёт в
+    # X-CSRF-Token (raw cookie). HMAC здесь сломал бы фронтенд: он эхо-шлёт
+    # значение cookie, а не подпись.
+    assert resp.headers["x-csrf-token"] == resp.cookies["fm_csrf"]
 
 
 # --- CSRF: защита от межсайтовых мутирующих запросов -------------------------

@@ -10,7 +10,7 @@ from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.security import decode_token, verify_csrf_token
+from app.core.security import decode_token
 from app.db import get_session
 from app.models.user import User
 
@@ -70,23 +70,6 @@ async def get_current_admin(
     if not user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
     return user
-
-
-async def verify_csrf(
-    request: Request,
-    fm_csrf: Annotated[str | None, Cookie()] = None,
-    x_csrf_token: Annotated[str | None, Header()] = None,
-) -> None:
-    """Двойная проверка CSRF: cookie fm_csrf должен совпадать с заголовком X-CSRF-Token.
-
-    Для мутирующих запросов из форм/JS. HMAC-подпись привязывает токен к secret_key.
-    """
-    header_token = x_csrf_token or request.headers.get("x-csrf-token")
-    cookie_token = fm_csrf
-    if not cookie_token or not header_token:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Отсутствует CSRF-токен")
-    if not verify_csrf_token(cookie_token, header_token):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Неверный CSRF-токен")
 
 
 # Методы, меняющие состояние: только для них проверяется Origin.
@@ -150,4 +133,3 @@ async def csrf_origin_guard(request: Request) -> None:
 CurrentUser = Annotated[User, Depends(get_current_user)]
 OptionalUser = Annotated[User | None, Depends(get_current_user_optional)]
 CurrentAdmin = Annotated[User, Depends(get_current_admin)]
-CsrfGuard = Annotated[None, Depends(verify_csrf)]

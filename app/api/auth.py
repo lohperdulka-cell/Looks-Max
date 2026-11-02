@@ -17,7 +17,6 @@ from app.config import settings
 from app.core import auth_service
 from app.core.deps import ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE, CurrentUser, DbSession
 from app.core.limiter import limiter
-from app.core.security import sign_csrf_token
 from app.logging_config import get_logger
 from app.schemas.auth import (
     LoginRequest,
@@ -67,7 +66,8 @@ def _set_auth_cookies(response: Response, access: str, refresh: str) -> None:
         domain=settings.cookie_domain,
         path="/",
     )
-    response.headers["X-CSRF-Token"] = sign_csrf_token(csrf_value)
+    # Значение = тот же токен, что клиент присылает в X-CSRF-Token (raw cookie).
+    response.headers["X-CSRF-Token"] = csrf_value
 
 
 def _clear_auth_cookies(response: Response) -> None:
