@@ -27,7 +27,10 @@ class ChatSession(TimestampMixin, Base):
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     messages: Mapped[list[ChatMessage]] = relationship(
-        back_populates="session", cascade="all, delete-orphan", order_by="ChatMessage.id"
+        lazy="raise_on_sql",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        order_by="ChatMessage.id",
     )
 
 
@@ -45,7 +48,7 @@ class ChatMessage(TimestampMixin, Base):
     tokens: Mapped[int | None] = mapped_column(Integer, default=None)
     meta: Mapped[dict | None] = mapped_column(JSON, default=None)
 
-    session: Mapped[ChatSession] = relationship(back_populates="messages")
+    session: Mapped[ChatSession] = relationship(lazy="raise_on_sql", back_populates="messages")
 
 
 class LooksmaxPlan(TimestampMixin, Base):

@@ -195,3 +195,25 @@ async def test_security_headers_present(client) -> None:
     assert resp.headers["x-content-type-options"] == "nosniff"
     assert resp.headers["x-frame-options"] == "DENY"
     assert "content-security-policy" in resp.headers
+
+
+# --- Async SQLAlchemy: запрет ленивой загрузки ---------------------------------
+
+
+def test_relationships_forbid_lazy_sql() -> None:
+    """Все связи помечены lazy="raise_on_sql".
+
+    Иначе обращение к незагруженной связи в async-сессии падает в проде
+    ошибкой MissingGreenlet (ленивая загрузка выполняется вне greenlet).
+    С raise_on_sql ошибка вылезает сразу и в тестах, а не у пользователя.
+    """
+    import app.models  # noqa: F401
+    from app.db import Base
+    from sqlalchemy import inspect as sa_inspect
+
+    offenders: list[str] = []
+    for mapper in Base.registry.mappers:
+        for rel in sa_inspect(mapper.class_).relationships:
+            if rel.lazy != "raise_on_sql":
+                offenders.append(f"{mapper.class_.__name__}.{rel.key}={rel.lazy}")
+    assert not offenders, f"Связи без raise_on_sql: {offenders}"

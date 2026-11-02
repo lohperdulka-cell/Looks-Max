@@ -41,10 +41,10 @@ class Report(TimestampMixin, Base):
     )
     is_public: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    user: Mapped[User] = relationship(back_populates="reports")
-    photo: Mapped[Photo] = relationship(back_populates="reports")
+    user: Mapped[User] = relationship(lazy="raise_on_sql", back_populates="reports")
+    photo: Mapped[Photo] = relationship(lazy="raise_on_sql", back_populates="reports")
     metrics: Mapped[list[MetricValue]] = relationship(
-        back_populates="report", cascade="all, delete-orphan"
+        lazy="raise_on_sql", back_populates="report", cascade="all, delete-orphan"
     )
 
 
@@ -69,4 +69,4 @@ class MetricValue(Base):
     weight: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
     extra: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
 
-    report: Mapped[Report] = relationship(back_populates="metrics")
+    report: Mapped[Report] = relationship(lazy="raise_on_sql", back_populates="metrics")

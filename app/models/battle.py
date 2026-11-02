@@ -32,7 +32,9 @@ class Battle(TimestampMixin, Base):
     winner_photo_id: Mapped[int | None] = mapped_column(Integer, default=None)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
-    votes: Mapped[list[Vote]] = relationship(back_populates="battle", cascade="all, delete-orphan")
+    votes: Mapped[list[Vote]] = relationship(
+        lazy="raise_on_sql", back_populates="battle", cascade="all, delete-orphan"
+    )
 
 
 class Vote(TimestampMixin, Base):
@@ -50,7 +52,7 @@ class Vote(TimestampMixin, Base):
     )
     chosen_photo_id: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    battle: Mapped[Battle] = relationship(back_populates="votes")
+    battle: Mapped[Battle] = relationship(lazy="raise_on_sql", back_populates="votes")
 
 
 class BattleSeason(TimestampMixin, Base):

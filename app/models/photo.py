@@ -41,5 +41,5 @@ class Photo(TimestampMixin, Base):
     is_hidden: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_public_in_battles: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    user: Mapped[User] = relationship(back_populates="photos")
-    reports: Mapped[list[Report]] = relationship(back_populates="photo")
+    user: Mapped[User] = relationship(lazy="raise_on_sql", back_populates="photos")
+    reports: Mapped[list[Report]] = relationship(lazy="raise_on_sql", back_populates="photo")

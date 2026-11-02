@@ -49,9 +49,11 @@ class User(TimestampMixin, Base):
     )
     show_in_battles: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    photos: Mapped[list[Photo]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    photos: Mapped[list[Photo]] = relationship(
+        lazy="raise_on_sql", back_populates="user", cascade="all, delete-orphan"
+    )
     reports: Mapped[list[Report]] = relationship(
-        back_populates="user", cascade="all, delete-orphan"
+        lazy="raise_on_sql", back_populates="user", cascade="all, delete-orphan"
     )
 
 
