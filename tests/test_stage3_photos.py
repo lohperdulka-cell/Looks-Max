@@ -195,7 +195,7 @@ async def test_rate_page_renders_for_user(client: AsyncClient) -> None:
     await _register(client)
     resp = await client.get("/rate")
     assert resp.status_code == 200
-    assert "Точки лица" in resp.text
+    assert "Разметка" in resp.text
 
 
 async def test_harmony_is_not_stuck_at_zero(client: AsyncClient, seeded_photo: dict) -> None:
