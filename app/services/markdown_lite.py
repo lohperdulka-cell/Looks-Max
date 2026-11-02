@@ -24,10 +24,13 @@ def _inline(text: str) -> str:
     """Разметка внутри строки. Порядок важен: код до ссылок, ссылки до эмфазы."""
     out = html.escape(text, quote=False)
     out = _CODE.sub(lambda m: f"<code>{m.group(1)}</code>", out)
+    # URL подставляется в атрибут href, поэтому его мало экранировать как текст
+    # (quote=False не трогает кавычки) — экранируем с quote=True, иначе кавычка
+    # в ссылке закрывает атрибут и добавляет свой (onmouseover=...).
     out = _LINK.sub(
         lambda m: (
-            f'<a href="{m.group(2)}" target="_blank" rel="noopener noreferrer nofollow">'
-            f"{m.group(1)}</a>"
+            f'<a href="{html.escape(m.group(2), quote=True)}" target="_blank" '
+            f'rel="noopener noreferrer nofollow">{m.group(1)}</a>'
         ),
         out,
     )

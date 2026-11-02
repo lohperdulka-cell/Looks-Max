@@ -73,6 +73,17 @@ def test_markdown_javascript_link_is_not_rendered() -> None:
     assert "href=" not in html
 
 
+def test_markdown_link_url_cannot_break_out_of_href() -> None:
+    """Кавычка в URL не должна закрывать атрибут и добавлять обработчик.
+
+    URL идёт в атрибут href, поэтому его мало экранировать как текст
+    (quote=False не трогает кавычки) — иначе получается внедрение атрибута.
+    """
+    html = markdown_lite.render('[click](https://x.com/"onmouseover="alert(1))')
+    assert '"onmouseover=' not in html
+    assert "&quot;onmouseover=&quot;" in html
+
+
 def test_markdown_plain_text_strips_markup() -> None:
     assert markdown_lite.plain_text("# H\n**b** [t](https://e.com)", 100) == "H b t"
 
@@ -177,6 +188,24 @@ async def test_article_page_renders_markdown_and_json_ld(client: AsyncClient, db
     assert "<strong>важный</strong>" in resp.text
     assert "application/ld+json" in resp.text
     assert '"@type": "Article"' in resp.text
+
+
+async def test_article_json_ld_escapes_script_close(client: AsyncClient, db_session) -> None:
+    """Заголовок статьи не должен закрывать тег ld+json и внедрять скрипт.
+
+    json.dumps + `| safe` не экранирует «</script>», поэтому заголовок вида
+    `</script><script>...` исполнялся бы как разметка. Фильтр tojson закрывает
+    «<»/«>», оставляя валидный JSON.
+    """
+    await _seed_article(
+        db_session,
+        slug="evil",
+        title="</script><script>alert(1)</script>",
+    )
+    resp = await client.get("/blog/evil")
+    assert resp.status_code == 200
+    assert "</script><script>alert(1)</script>" not in resp.text
+    assert "\\u003c/script\\u003e" in resp.text
 
 
 async def test_article_page_404_for_draft(client: AsyncClient, db_session) -> None:

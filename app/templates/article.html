@@ -5,7 +5,7 @@
 {% block og_title %}{{ article.title }}{% endblock %}
 
 {% block head_extra %}
-  <script type="application/ld+json">{{ json_ld | safe }}</script>
+  <script type="application/ld+json">{{ json_ld | tojson }}</script>
 {% endblock %}
 
 {% block content %}

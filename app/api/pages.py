@@ -244,8 +244,6 @@ async def blog_index(request: Request, user: OptionalUser, page: int = 1) -> HTM
 @router.get("/blog/{slug}", response_class=HTMLResponse)
 async def blog_article(request: Request, slug: str, user: OptionalUser) -> Response:
     """Страница статьи с SEO-разметкой Article."""
-    import json
-
     async with SessionLocal() as db:
         article = await content_service.get_article_by_slug(db, slug)
         if article is None or not article.is_published:
@@ -256,7 +254,10 @@ async def blog_article(request: Request, slug: str, user: OptionalUser) -> Respo
                 status_code=404,
             )
         await content_service.register_view(db, article)
-        json_ld = json.dumps(content_service.article_json_ld(article), ensure_ascii=False)
+        # Передаём словарь, а не строку: в шаблоне его сериализует фильтр tojson,
+        # который экранирует «<»/«>», иначе «</script>» в заголовке статьи
+        # закрывает тег ld+json и позволяет внедрить скрипт (XSS из админки).
+        json_ld = content_service.article_json_ld(article)
         payload = {
             "slug": article.slug,
             "title": article.title,
