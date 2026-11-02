@@ -90,3 +90,37 @@ class UploadKind(BaseModel):
     """Параметр типа загрузки (для будущих альбомов)."""
 
     kind: Literal["frontal", "profile", "other"] = "frontal"
+
+
+class WizardAnchorOut(BaseModel):
+    """Один шаг мастера разметки: куда ставить точку и с чем сверить."""
+
+    key: str
+    label: str
+    hint: str
+    canonical: tuple[float, float]
+    auto: tuple[float, float] | None = None
+
+
+class WizardStartOut(BaseModel):
+    """Данные для запуска мастера разметки."""
+
+    photo_id: int
+    image_url: str
+    image_size: tuple[int, int] | None = None
+    bbox: tuple[float, float, float, float] | None = None
+    anchors: list[WizardAnchorOut]
+
+
+class WizardInterpolateRequest(BaseModel):
+    """Заданные пользователем 16 ключевых точек (нормализованные 0..1)."""
+
+    anchors: dict[str, tuple[float, float]] = Field(min_length=5)
+
+
+class WizardInterpolateOut(BaseModel):
+    """Полный меш, восстановленный по ключевым точкам."""
+
+    points: list[tuple[float, float]]
+    provider: str = "manual"
+    image_size: tuple[int, int] | None = None

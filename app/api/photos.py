@@ -33,6 +33,10 @@ from app.schemas.photos import (
     PhotoOut,
     PhotoVisibilityUpdate,
     PreviewOut,
+    WizardAnchorOut,
+    WizardInterpolateOut,
+    WizardInterpolateRequest,
+    WizardStartOut,
 )
 
 logger = get_logger(__name__)
@@ -335,3 +339,76 @@ async def preview_score(
         )
 
     return await run_in_threadpool(_compute)
+
+
+@router.get("/{photo_id}/wizard", response_model=WizardStartOut)
+async def wizard_start(photo_id: int, user: CurrentUser, db: DbSession) -> WizardStartOut:
+    """Данные для мастера ручной разметки: шаги, подсказки и автопозиции.
+
+    Автопозиции берём из уже найденных детектором точек — пользователь чаще
+    лишь поправляет их, а не ставит с нуля. Для схемы без совпадающих индексов
+    (MediaPipe) автопозиции не отдаём: подставлять чужие индексы нельзя.
+    """
+    from app.ml import wizard as wizard_mod
+
+    photo = await _get_owned_photo(db, photo_id, user)
+    auto = None
+    if photo.landmarks and photo.landmarks.get("points"):
+        auto = await run_in_threadpool(
+            wizard_mod.detect_anchor_points, np.asarray(photo.landmarks["points"], dtype=np.float64)
+        )
+    size = None
+    if photo.width and photo.height:
+        size = (int(photo.width), int(photo.height))
+    return WizardStartOut(
+        photo_id=photo.id,
+        image_url=f"/api/photos/{photo.id}/image",
+        image_size=size,
+        bbox=tuple(photo.landmarks["bbox"])
+        if photo.landmarks and photo.landmarks.get("bbox")
+        else None,
+        anchors=[WizardAnchorOut(**item) for item in wizard_mod.anchor_definitions(auto)],
+    )
+
+
+@router.post("/{photo_id}/wizard", response_model=WizardInterpolateOut)
+@limiter.limit("60/minute")
+async def wizard_interpolate(
+    photo_id: int,
+    payload: WizardInterpolateRequest,
+    user: CurrentUser,
+    db: DbSession,
+    request: Request,
+) -> WizardInterpolateOut:
+    """Восстанавливает полный меш по 16 ключевым точкам.
+
+    Ничего не сохраняет: пользователь проходит шаги, видит результат и лишь
+    потом нажимает «Сохранить» (PUT /{photo_id}/landmarks). Так промежуточные
+    состояния не засоряют БД.
+    """
+    from app.ml import wizard as wizard_mod
+
+    photo = await _get_owned_photo(db, photo_id, user)
+    unknown = [k for k in payload.anchors if k not in wizard_mod.ANCHOR_KEYS]
+    if unknown:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Неизвестные ключевые точки: {', '.join(sorted(unknown))}",
+        )
+    for key, (x, y) in payload.anchors.items():
+        if not (-0.5 <= x <= 1.5 and -0.5 <= y <= 1.5):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail=f"Точка {key} вне кадра"
+            )
+
+    try:
+        mesh = await run_in_threadpool(wizard_mod.interpolate_mesh, payload.anchors)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    size = (int(photo.width), int(photo.height)) if photo.width and photo.height else None
+    return WizardInterpolateOut(
+        points=[(float(x), float(y)) for x, y in mesh],
+        provider="manual",
+        image_size=size,
+    )

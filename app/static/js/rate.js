@@ -23,6 +23,7 @@
   const runBtn = $('[data-run-preview]');
   const resetBtn = $('[data-reset-points]');
   const reportBtn = $('[data-create-report]');
+  const wizardBtn = $('[data-open-wizard]');
   const previewEmpty = $('[data-preview-empty]');
   const previewContent = $('[data-preview-content]');
   const genderPick = $('[data-gender-pick]');
@@ -168,6 +169,7 @@
       runBtn.disabled = state.points.length === 0;
       resetBtn.disabled = state.points.length === 0;
       if (reportBtn) reportBtn.disabled = state.points.length === 0;
+      if (wizardBtn) wizardBtn.disabled = false;
       toast('Фото обработано. Точки можно поправить.', 'success');
       resetPreview();
     } catch (err) {
@@ -434,6 +436,23 @@
     });
   }
 
+  if (wizardBtn) {
+    wizardBtn.addEventListener('click', () => {
+      if (!state.photo || !window.fmWizard) return;
+      window.fmWizard.open(state.photo.id, {
+        onSaved: (mesh) => {
+          // Мастер вернул готовый 106-точечный меш — перерисовываем канвас и
+          // помечаем точки как исходные, чтобы «Сбросить» возвращал к разметке.
+          state.points = mesh.points.map(([x, y]) => ({ x, y }));
+          state.originalPoints = state.points.map((p) => ({ ...p }));
+          state.dirty = false;
+          draw();
+          resetPreview();
+        },
+      });
+    });
+  }
+
   resetBtn.addEventListener('click', () => {
     state.points = state.originalPoints.map((p) => ({ ...p }));
     state.dirty = true;
@@ -456,6 +475,7 @@
       runBtn.disabled = state.points.length === 0;
       resetBtn.disabled = state.points.length === 0;
       if (reportBtn) reportBtn.disabled = state.points.length === 0;
+      if (wizardBtn) wizardBtn.disabled = false;
     } catch { /* гость или пусто — ничего не делаем */ }
   })();
 })();
