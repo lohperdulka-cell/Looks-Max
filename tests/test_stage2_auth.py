@@ -305,3 +305,32 @@ async def test_safe_method_ignores_foreign_origin(client: AsyncClient) -> None:
     """GET с чужого origin не блокируется: состояние не меняется."""
     resp = await client.get("/health", headers={"Origin": "https://evil.example"})
     assert resp.status_code == 200
+
+
+# --- защита от перебора пароля/токена ---------------------------------------
+
+
+def test_credential_endpoints_are_rate_limited() -> None:
+    """Все входы с паролем/токеном должны иметь лимит запросов.
+
+    В тестах limiter выключен (RATE_LIMIT_ENABLED=false), поэтому проверяем
+    статически: без @limiter.limit подбор пароля и токена сброса не тормозится.
+    """
+    import re
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "app" / "api" / "auth.py").read_text(
+        encoding="utf-8"
+    )
+
+    for name in (
+        "register",
+        "login",
+        "request_password_reset",
+        "confirm_password_reset",
+    ):
+        pattern = (
+            rf"@limiter\.limit\([^\n]*\)\s*\n"
+            rf"(?:@router\.\w+\([^\n]*\)\s*\n)?async def {name}\("
+        )
+        assert re.search(pattern, source), f"{name} без @limiter.limit"

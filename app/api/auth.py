@@ -169,7 +169,10 @@ async def request_password_reset(
 
 
 @router.post("/password-reset/confirm", response_model=MessageResponse)
-async def confirm_password_reset(payload: PasswordResetConfirm, db: DbSession) -> MessageResponse:
+@limiter.limit(settings.rate_limit_auth)
+async def confirm_password_reset(
+    request: Request, payload: PasswordResetConfirm, db: DbSession
+) -> MessageResponse:
     """Устанавливает новый пароль по токену из письма."""
     await auth_service.confirm_password_reset(db, payload.token, payload.new_password)
     return MessageResponse(detail="Пароль обновлён, войдите заново")
