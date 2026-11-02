@@ -31,23 +31,11 @@ from app.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Индексы ключевых точек InsightFace 2d106det (1-based в оригинале, здесь 0-based).
-# Источник соответствия: insightface/python-package/insightface/app/common.py + docs.
-IF_LEFT_EYE = (35, 33)  # внутренний, наружный угол левого глаза (со стороны изображения)
-IF_RIGHT_EYE = (89, 87)
-IF_LEFT_BROW = (43, 46)
-IF_RIGHT_BROW = (97, 100)
-IF_NOSE_TIP = 86
-IF_NOSE_LEFT = 74
-IF_NOSE_RIGHT = 98
-IF_MOUTH_LEFT = 60
-IF_MOUTH_RIGHT = 105  # правый угол рта
-IF_UPPER_LIP = 62
-IF_LOWER_LIP = 66
-IF_CHIN = 16
-IF_JAW_LEFT = 1
-IF_JAW_RIGHT = 15
-IF_FOREHEAD_TOP = 27  # трихион (приближение)
+# Семантические индексы точек конкретной схемы (InsightFace 2d106, MediaPipe
+# FaceMesh) живут в app/ml/metrics.py рядом с кодом, который их использует.
+# Держать здесь второй, «справочный» набор нельзя: он расходился с рабочим
+# (например, углы рта 60/105 вместо 52/61) и при первом же импорте молча
+# вернул бы исправленный баг обратно.
 
 _landmark_lock = threading.Lock()
 _insightface_app: Any | None = None
