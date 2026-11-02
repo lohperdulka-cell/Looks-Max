@@ -100,7 +100,9 @@
 
   <div class="toast-stack" data-toast-stack aria-live="polite" aria-atomic="false"></div>
 
-  {% include "partials/bottom_nav.html" %}
+  {# Нижняя навигация есть везде, кроме админки: там свой набор вкладок, и
+     рельс продукта только мешал бы. Админка переопределяет блок пустым. #}
+  {% block bottom_nav %}{% include "partials/bottom_nav.html" %}{% endblock %}
 
   <script src="/static/js/app.js" defer></script>
   <script src="/static/js/analytics.js" defer></script>
