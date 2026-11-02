@@ -258,6 +258,60 @@
     });
   }
 
+  /* --- Установка нового пароля по ссылке из письма -------------------------- */
+  // Ссылка из письма ведёт на /reset-password?token=... — здесь мы её читаем
+  // и показываем форму нового пароля. Без этого шага сброс не завершался:
+  // страница умела только запрашивать письмо.
+  const confirmForm = $('[data-reset-confirm-form]');
+  if (confirmForm) {
+    const token = (new URLSearchParams(location.search).get('token') || '').trim();
+    const requestBlock = $('[data-reset-request]');
+    const confirmBlock = $('[data-reset-confirm]');
+    if (token) {
+      $('input[name="token"]', confirmForm).value = token;
+      if (requestBlock) requestBlock.hidden = true;
+      if (confirmBlock) confirmBlock.hidden = false;
+      // Токен в адресной строке не нужен: убираем, чтобы не утекал в историю/логи.
+      history.replaceState(null, '', location.pathname);
+    }
+
+    confirmForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearFormError(confirmForm);
+      const success = $('[data-form-success]', confirmForm);
+      const submit = $('button[type="submit"]', confirmForm);
+      const tokenValue = $('input[name="token"]', confirmForm).value;
+      const password = $('input[name="new_password"]', confirmForm).value;
+      const repeat = $('input[name="confirm_password"]', confirmForm).value;
+
+      if (!tokenValue) {
+        showFormError(confirmForm, 'Ссылка недействительна. Запросите письмо заново.');
+        return;
+      }
+      if (password !== repeat) {
+        showFormError(confirmForm, 'Пароли не совпадают.');
+        return;
+      }
+
+      submit.disabled = true;
+      submit.setAttribute('aria-busy', 'true');
+      try {
+        const data = await api('/api/auth/password-reset/confirm', {
+          method: 'POST',
+          body: { token: tokenValue, new_password: password },
+        });
+        if (success) { success.textContent = data.detail; success.hidden = false; }
+        toast('Пароль обновлён', 'success');
+        setTimeout(() => { location.href = '/login'; }, 1200);
+      } catch (err) {
+        showFormError(confirmForm, err.message);
+      } finally {
+        submit.disabled = false;
+        submit.removeAttribute('aria-busy');
+      }
+    });
+  }
+
   /* --- Актуальность состояния авторизации в шапке -------------------------- */
   const authSlot = $('[data-auth-slot]');
   if (authSlot) {

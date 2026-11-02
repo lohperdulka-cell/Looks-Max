@@ -334,3 +334,33 @@ def test_credential_endpoints_are_rate_limited() -> None:
             rf"(?:@router\.\w+\([^\n]*\)\s*\n)?async def {name}\("
         )
         assert re.search(pattern, source), f"{name} без @limiter.limit"
+
+
+def test_reset_password_page_wires_confirm_form() -> None:
+    """Страница сброса должна уметь принять токен из письма.
+
+    Ссылка из письма ведёт на /reset-password?token=..., но форма умела
+    только запрашивать письмо: шаблон не содержал полей нового пароля, а JS
+    не читал токен из URL и не звал /api/auth/password-reset/confirm. Сброс
+    не завершался ни у одного пользователя.
+    """
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    template = (root / "app" / "templates" / "reset_password.html").read_text(encoding="utf-8")
+    script = (root / "app" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+    assert "data-reset-confirm-form" in template
+    assert 'name="new_password"' in template
+    assert 'name="token"' in template
+
+    assert "data-reset-confirm-form" in script
+    assert "location.search" in script
+    assert "/api/auth/password-reset/confirm" in script
+
+
+async def test_reset_password_page_renders_with_token(client: AsyncClient) -> None:
+    """Страница с ?token= отдаётся 200 (токен обрабатывается на клиенте)."""
+    resp = await client.get("/reset-password?token=abc123def456")
+    assert resp.status_code == 200
+    assert "data-reset-confirm-form" in resp.text
