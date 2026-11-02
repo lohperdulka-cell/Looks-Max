@@ -260,7 +260,7 @@ METRIC_FORMULAS: dict[str, str] = {
     "facial_symmetry": "mean(|d_left − d_right|) / face_width",
     "canthal_tilt": "(tilt(eye_left) + tilt(eye_right)) / 2",
     "facial_thirds": "min(t1, t2, t3) / max(t1, t2, t3)",
-    "facial_fifths": "min(eye_w_l, intercanthal, eye_w_r) / max(…)",
+    "facial_fifths": "eye_width / (face_width / 5)",
     "golden_ratio": "face_height / cheek_width",
     "interpupillary_ratio": "ipd / face_width",
     "eye_spacing": "intercanthal / mean(eye_w_l, eye_w_r)",
@@ -320,3 +320,9 @@ DEMO_DISCLAIMER = (
     "ДЕМО-РЕЖИМ: детектор лица не установлен, точки построены синтетически. "
     "Числа показывают работу конвейера и НЕ описывают вашу внешность."
 )
+
+# Доля высоты контура, которую детектор SCRFD добавляет сверху как лоб.
+# Замерена на реальных кадрах (t1 0.35, grace 0.30, astronaut 0.43) и нужна
+# дважды: чтобы оценить трихион, когда bbox недоступен, и чтобы синтетический
+# bbox демо-провайдера вёл себя как настоящий детектор.
+FOREHEAD_RATIO = 0.352

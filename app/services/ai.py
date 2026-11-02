@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.logging_config import get_logger
@@ -87,13 +88,19 @@ class ReportContext:
 
 
 async def load_report_context(db: AsyncSession, user_id: int) -> ReportContext:
-    """Берёт последний отчёт пользователя и сжимает его в контекст."""
+    """Берёт последний отчёт пользователя и сжимает его в контекст.
+
+    Метрики и фото подгружаются сразу (selectinload): serialize_report читает
+    report.metrics и report.photo, а в async-сессии ленивая загрузка связи
+    падает с MissingGreenlet.
+    """
     report = (
         await db.execute(
             select(Report)
             .where(Report.user_id == user_id)
             .order_by(Report.created_at.desc())
             .limit(1)
+            .options(selectinload(Report.metrics), selectinload(Report.photo))
         )
     ).scalar_one_or_none()
     if report is None:

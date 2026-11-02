@@ -79,6 +79,11 @@ class FaceLandmarks:
     gender: str | None = None  # male | female
     age: float | None = None
     bbox: tuple[float, float, float, float] | None = None  # x1,y1,x2,y2 (норм.)
+    # Размер изображения (w, h), к которому привязаны нормализованные координаты.
+    # Нужен, чтобы вернуть точки в физическую (изотропную) систему: нормализация
+    # по осям независимо сжимает x и y по-разному, и углы/пропорции получаются
+    # искажёнными пропорцией кадра. None — размер неизвестен.
+    image_size: tuple[int, int] | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -282,6 +287,7 @@ def _extract_with_insightface(image_bgr: np.ndarray) -> FaceLandmarks | None:
         gender=gender,
         age=float(face.age) if getattr(face, "age", None) is not None else None,
         bbox=(x1 / w, y1 / h, x2 / w, y2 / h),
+        image_size=(w, h),
     )
 
 
@@ -336,6 +342,7 @@ def _extract_with_mediapipe(image_bgr: np.ndarray) -> FaceLandmarks | None:
     lm = result.multi_face_landmarks[0]
     pts = np.array([[p.x, p.y] for p in lm.landmark], dtype=np.float64)
     xs, ys = pts[:, 0], pts[:, 1]
+    h, w = image_bgr.shape[:2]
     return FaceLandmarks(
         points=pts,
         provider="mediapipe",
@@ -345,6 +352,7 @@ def _extract_with_mediapipe(image_bgr: np.ndarray) -> FaceLandmarks | None:
             float(np.max(xs)),
             float(np.max(ys)),
         ),
+        image_size=(w, h),
     )
 
 
@@ -352,11 +360,13 @@ def _extract_with_demo(image_bgr: np.ndarray) -> FaceLandmarks | None:
     """Демо-провайдер: синтетическая сетка лица (см. demo_landmarks)."""
     from app.ml.demo_landmarks import synthetic_bbox, synthetic_points
 
+    h, w = image_bgr.shape[:2]
     points = synthetic_points(image_bgr)
     return FaceLandmarks(
         points=points,
         provider="demo",
         bbox=synthetic_bbox(points),
+        image_size=(w, h),
         extra={"demo": True},
     )
 

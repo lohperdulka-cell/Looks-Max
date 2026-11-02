@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
 
 from app.core.deps import CurrentUser, DbSession
 from app.ml.constants import CATEGORY_LABELS, MetricCategory
@@ -156,6 +157,7 @@ async def recommended(user: CurrentUser, db: DbSession) -> RecommendationExercis
             .where(Report.user_id == user.id)
             .order_by(Report.created_at.desc())
             .limit(1)
+            .options(selectinload(Report.metrics))
         )
     ).scalar_one_or_none()
 

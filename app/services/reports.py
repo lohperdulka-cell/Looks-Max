@@ -71,12 +71,15 @@ def landmarks_from_photo(photo: Photo) -> FaceLandmarks:
         raise ValueError("У фото нет landmarks")
     points = np.asarray(photo.landmarks["points"], dtype=np.float64)
     bbox = tuple(photo.landmarks["bbox"]) if photo.landmarks.get("bbox") else None
+    size = photo.landmarks.get("image_size")
+    image_size = (int(size[0]), int(size[1])) if size else None
     return FaceLandmarks(
         points=points,
         provider=photo.landmarks.get("provider", "manual"),
         gender=photo.landmarks.get("gender"),
         age=photo.landmarks.get("age"),
         bbox=bbox,
+        image_size=image_size,
     )
 
 

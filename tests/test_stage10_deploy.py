@@ -280,14 +280,18 @@ def test_symmetry_axis_ignores_nose_offset():
     import numpy as np
     from app.ml.demo_landmarks import synthetic_points
     from app.ml.landmarks import FaceLandmarks
-    from app.ml.metrics import compute_raw_metrics
+    from app.ml.metrics import IF_NOSE_TIP, compute_raw_metrics
 
     image = np.random.default_rng(5).integers(60, 200, (700, 700, 3), dtype=np.uint8)
     pts = synthetic_points(image)
     base = compute_raw_metrics(FaceLandmarks(points=pts, provider="demo")).values
 
+    # В схеме InsightFace 106 кончик носа — индекс 86 (на средней линии).
+    # Индекс 30 — это точка правой челюсти, зеркальная 14; сдвиг 30 законно
+    # меняет симметрию, поэтому проверяем именно нос.
+    assert IF_NOSE_TIP == 86
     shifted = pts.copy()
-    shifted[30, 0] += 0.05  # кончик носа (индекс 30 в 68-точечной схеме)
+    shifted[IF_NOSE_TIP, 0] += 0.05
     after = compute_raw_metrics(FaceLandmarks(points=shifted, provider="demo")).values
 
     assert base["facial_symmetry"] == pytest.approx(after["facial_symmetry"], abs=1e-9)

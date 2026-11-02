@@ -47,6 +47,7 @@ def _landmarks_to_dict(lm: FaceLandmarks) -> dict:
         "bbox": list(lm.bbox) if lm.bbox else None,
         "gender": lm.gender,
         "age": lm.age,
+        "image_size": list(lm.image_size) if lm.image_size else None,
     }
 
 
@@ -54,12 +55,14 @@ def _landmarks_from_dict(data: dict) -> FaceLandmarks:
     """Восстанавливает FaceLandmarks из сохранённого словаря."""
     points = np.asarray(data["points"], dtype=np.float64)
     bbox = tuple(data["bbox"]) if data.get("bbox") else None
+    image_size = tuple(data["image_size"]) if data.get("image_size") else None
     return FaceLandmarks(
         points=points,
         provider=data.get("provider", "manual"),
         gender=data.get("gender"),
         age=data.get("age"),
         bbox=bbox,
+        image_size=image_size,  # type: ignore[arg-type]
     )
 
 
