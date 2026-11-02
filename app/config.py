@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -134,6 +134,30 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @model_validator(mode="after")
+    def _guard_production_secrets(self) -> Settings:
+        """Не даёт поднять прод на дефолтных секретах.
+
+        Значения по умолчанию лежат в репозитории, поэтому с ними любой может
+        подделать JWT и cookie. Падаем на старте: молчаливый запуск с публично
+        известным секретом хуже, чем неудачный деплой.
+        """
+        if not self.is_production:
+            return self
+
+        insecure = {
+            "SECRET_KEY": "dev-insecure-secret-change-me",
+            "JWT_SECRET": "dev-jwt-secret-change-me",
+        }
+        used_default = [
+            name for name, default in insecure.items() if getattr(self, name.lower()) == default
+        ]
+        if used_default:
+            raise ValueError("в production задайте свои значения: " + ", ".join(used_default))
+        if not self.cookie_secure:
+            raise ValueError("в production требуется COOKIE_SECURE=true")
+        return self
 
 
 @lru_cache

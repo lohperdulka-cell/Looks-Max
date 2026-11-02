@@ -15,6 +15,7 @@ from app.core.security import (
 from app.ml.landmarks import FaceLandmarks
 from app.ml.metrics import compute_raw_metrics
 from app.ml.scoring import deviation_to_score, score_metrics, strengths_and_growth
+from pydantic import ValidationError
 
 # --- Конфигурация -------------------------------------------------------------
 
@@ -28,6 +29,57 @@ def test_settings_normalizes_postgres_dsn() -> None:
 def test_settings_sqlite_flag() -> None:
     s = Settings(database_url="sqlite+aiosqlite:///./x.db")
     assert s.is_sqlite
+
+
+# --- Безопасность продакшена --------------------------------------------------
+
+
+def test_production_rejects_default_secrets() -> None:
+    """Прод не должен подниматься с секретами из репозитория.
+
+    С публично известным JWT_SECRET любой может выпустить себе токен, поэтому
+    запуск обязан падать, а не работать молча. Значения передаём явно: в
+    conftest.py те же переменные заданы через окружение.
+    """
+    with pytest.raises(ValidationError) as exc:
+        Settings(
+            _env_file=None,
+            app_env="production",
+            secret_key="dev-insecure-secret-change-me",
+            jwt_secret="dev-jwt-secret-change-me",
+            cookie_secure=True,
+        )
+    assert "SECRET_KEY" in str(exc.value) and "JWT_SECRET" in str(exc.value)
+
+
+def test_production_requires_secure_cookie() -> None:
+    """Cookie без флага Secure уходят по HTTP и перехватываются."""
+    with pytest.raises(ValidationError) as exc:
+        Settings(
+            _env_file=None,
+            app_env="production",
+            secret_key="s" * 32,
+            jwt_secret="j" * 32,
+            cookie_secure=False,
+        )
+    assert "COOKIE_SECURE" in str(exc.value)
+
+
+def test_production_accepts_explicit_secrets() -> None:
+    s = Settings(
+        _env_file=None,
+        app_env="production",
+        secret_key="s" * 32,
+        jwt_secret="j" * 32,
+        cookie_secure=True,
+    )
+    assert s.is_production
+
+
+def test_local_allows_dev_secrets() -> None:
+    """Локальный запуск и тесты не должны требовать настройки секретов."""
+    s = Settings(_env_file=None, app_env="local")
+    assert not s.is_production
 
 
 # --- Безопасность -------------------------------------------------------------
