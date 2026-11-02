@@ -1,0 +1,36 @@
+{# Нижняя навигация: основное меню для мобильных, где верхнее меню прячется
+   под бургером. Показывается только на узких экранах (см. CSS). Пункты
+   совпадают с верхней навигацией, чтобы не было двух разных «карт» сайта.
+
+   Центральная кнопка «Оценка» — главное действие продукта, поэтому она
+   вынесена и подсвечена: с любой страницы один тап до загрузки фото.
+   Активный пункт определяется по пути запроса (серверная отрисовка). #}
+{% set path = request.url.path if request else '/' %}
+<nav class="bottom-nav" aria-label="Нижняя навигация">
+  <a class="bottom-nav-item{% if path == '/' %} is-active{% endif %}" href="/"
+     {% if path == '/' %}aria-current="page"{% endif %}>
+    <span class="bottom-nav-icon" aria-hidden="true">⌂</span>
+    <span class="bottom-nav-label">Главная</span>
+  </a>
+  <a class="bottom-nav-item{% if path.startswith('/battles') %} is-active{% endif %}" href="/battles"
+     {% if path.startswith('/battles') %}aria-current="page"{% endif %}>
+    <span class="bottom-nav-icon" aria-hidden="true">⚔</span>
+    <span class="bottom-nav-label">Мобатлы</span>
+  </a>
+  <a class="bottom-nav-item bottom-nav-cta{% if path.startswith('/rate') %} is-active{% endif %}"
+     href="/rate" aria-label="Оценить лицо по фото"
+     {% if path.startswith('/rate') %}aria-current="page"{% endif %}>
+    <span class="bottom-nav-icon" aria-hidden="true">◉</span>
+    <span class="bottom-nav-label">Оценка</span>
+  </a>
+  <a class="bottom-nav-item{% if path.startswith('/exercises') %} is-active{% endif %}" href="/exercises"
+     {% if path.startswith('/exercises') %}aria-current="page"{% endif %}>
+    <span class="bottom-nav-icon" aria-hidden="true">✚</span>
+    <span class="bottom-nav-label">Упражнения</span>
+  </a>
+  <a class="bottom-nav-item{% if path.startswith('/profile') %} is-active{% endif %}" href="/profile"
+     {% if path.startswith('/profile') %}aria-current="page"{% endif %}>
+    <span class="bottom-nav-icon" aria-hidden="true">☺</span>
+    <span class="bottom-nav-label">Профиль</span>
+  </a>
+</nav>

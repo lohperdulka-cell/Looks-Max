@@ -14,6 +14,7 @@ import pytest
 from app.ml import landmarks as lm_module
 from app.ml.demo_landmarks import synthetic_bbox, synthetic_points
 from app.ml.landmarks import LandmarkError, extract_landmarks
+from httpx import AsyncClient
 from PIL import Image
 
 
@@ -587,3 +588,30 @@ def test_client_ip_falls_back_without_xff(monkeypatch) -> None:
 
     monkeypatch.setattr(mod.settings, "trust_proxy_headers", True, raising=False)
     assert mod.client_ip(_request_with({})) == "1.2.3.4"
+
+
+# --- Этап 3: нижняя навигация и главный CTA -----------------------------------
+
+
+async def test_bottom_nav_present_on_landing(client: AsyncClient) -> None:
+    """Нижняя навигация есть на лендинге и ведёт на ключевые разделы."""
+    resp = await client.get("/")
+    assert resp.status_code == 200
+    html = resp.text
+    assert 'class="bottom-nav"' in html
+    for href in ("/rate", "/battles", "/exercises", "/profile"):
+        assert f'href="{href}"' in html
+
+
+async def test_landing_main_cta_goes_to_rate(client: AsyncClient) -> None:
+    """Главная кнопка на лендинге ведёт на страницу оценки, а не на регистрацию."""
+    resp = await client.get("/")
+    assert 'class="btn btn-primary btn-lg" href="/rate"' in resp.text
+
+
+async def test_bottom_nav_marks_active_section(client: AsyncClient) -> None:
+    """Активный раздел подсвечивается (aria-current) для доступности."""
+    resp = await client.get("/rate")
+    assert resp.status_code in (200, 302)
+    if resp.status_code == 200:
+        assert 'aria-current="page"' in resp.text

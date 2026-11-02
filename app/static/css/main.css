@@ -953,3 +953,41 @@ code { font-family: var(--mono); font-size: .9em; background: var(--surface-2); 
   .wizard-panel { border-left: none; border-top: 1px solid var(--border); }
   .wizard-image { max-height: 52vh; }
 }
+
+/* ==========================================================================
+   Нижняя навигация (мобильные). На десктопе скрыта: там работает верхнее меню.
+   Отступ снизу у main, чтобы панель не перекрывала контент.
+   ========================================================================== */
+.bottom-nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 120;
+  display: flex; align-items: stretch; justify-content: space-around;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.bottom-nav-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px 9px; color: var(--fg-muted); font-size: .68rem; text-decoration: none;
+  min-width: 0;
+}
+.bottom-nav-item.is-active { color: var(--accent); }
+.bottom-nav-icon { font-size: 1.16rem; line-height: 1; }
+.bottom-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+/* Центральная кнопка приподнята: главное действие продукта. */
+.bottom-nav-cta { position: relative; }
+.bottom-nav-cta .bottom-nav-icon {
+  display: grid; place-items: center; width: 44px; height: 44px; margin-top: -18px;
+  border-radius: 50%; background: var(--accent); color: #04121a; font-size: 1.25rem;
+  box-shadow: 0 6px 18px rgba(79, 209, 197, .38);
+}
+.bottom-nav-cta.is-active .bottom-nav-icon { background: var(--accent); }
+.bottom-nav-cta .bottom-nav-label { margin-top: 2px; }
+
+/* Панель видна только на узких экранах. */
+@media (max-width: 900px) {
+  .site-main { padding-bottom: 74px; }
+}
+@media (min-width: 901px) {
+  .bottom-nav { display: none; }
+}

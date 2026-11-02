@@ -11,7 +11,7 @@ TypeScript или React: это жёсткое требование заказч
 . .venv/bin/activate
 ruff check app tests && ruff format app tests
 mypy app
-pytest                     # ~272 теста, идёт около 150 секунд
+pytest                     # ~275 тестов, идёт около 150 секунд
 uvicorn app.main:app --reload --port 8000
 ```
 
