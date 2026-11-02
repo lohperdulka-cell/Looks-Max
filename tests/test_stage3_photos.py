@@ -262,3 +262,28 @@ def test_mediapipe_lip_height_is_not_zero() -> None:
     raw = compute_raw_metrics(lm)
     assert raw.values["mouth_proportion"] < 30.0
     assert raw.values["mouth_proportion"] > 0.5
+
+
+# --- Безопасность путей к медиафайлам ----------------------------------------
+
+
+def test_resolve_media_path_rejects_sibling_prefix_dir() -> None:
+    """Путь с выходом в соседний каталог с общим префиксом отклоняется.
+
+    Строковая проверка startswith('/media') пропускала '/media_evil': такой
+    относительный путь увёл бы файл за пределы media_root.
+    """
+    from app.core.storage import resolve_media_path
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as exc:
+        resolve_media_path("../media_evil/x.png")
+    assert exc.value.status_code == 400
+
+
+def test_resolve_media_path_accepts_inside_root() -> None:
+    """Обычный путь внутри media_root резолвится без ошибки."""
+    from app.core.storage import resolve_media_path
+
+    resolved = resolve_media_path("users/1/photo.png")
+    assert resolved.name == "photo.png"

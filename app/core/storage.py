@@ -124,10 +124,16 @@ async def save_user_image(upload: UploadFile, user_id: int) -> StoredFile:
 
 
 def resolve_media_path(relative_path: str) -> Path:
-    """Безопасно резолвит путь внутри media_root, отклоняя выход за его пределы."""
+    """Безопасно резолвит путь внутри media_root, отклоняя выход за его пределы.
+
+    Проверка через is_relative_to, а не startswith(str(root)): строковый префикс
+    пропускает соседние каталоги с общим префиксом («/media_evil» начинается с
+    «/media»), и путь вида «../media_evil/x» уводил бы запись/чтение за пределы
+    media_root, если значение когда-нибудь придёт из БД/API без валидации.
+    """
     root = settings.media_root.resolve()
     candidate = (root / relative_path).resolve()
-    if not str(candidate).startswith(str(root)):
+    if not candidate.is_relative_to(root):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Некорректный путь")
     return candidate
 
