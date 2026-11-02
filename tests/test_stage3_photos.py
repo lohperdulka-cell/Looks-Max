@@ -182,3 +182,83 @@ def test_index_map_selected_by_point_count() -> None:
     assert if_map["nose_tip"] == 86
     assert mp_map["nose_tip"] != 86
     assert max(if_map.values()) < 106
+
+
+def _synthetic_mediapipe_points() -> object:
+    """Симметричный «идеальный» анфас в схеме MediaPipe (478 точек).
+
+    Все зеркальные пары расставлены строго симметрично относительно x=0.5, так
+    что любая ненулевая асимметрия — дефект расчёта, а не лица.
+    """
+    import numpy as np
+
+    pts = np.full((478, 2), 0.5, dtype=np.float64)
+    # (индекс, x, y) — левые и правые точки заданы зеркально.
+    explicit = {
+        33: (0.35, 0.50),
+        133: (0.40, 0.50),
+        362: (0.60, 0.50),
+        263: (0.65, 0.50),
+        10: (0.50, 0.10),
+        152: (0.50, 0.90),
+        172: (0.30, 0.75),
+        397: (0.70, 0.75),
+        234: (0.28, 0.50),
+        454: (0.72, 0.50),
+        61: (0.45, 0.72),
+        291: (0.55, 0.72),
+        0: (0.50, 0.70),
+        17: (0.50, 0.74),
+        1: (0.50, 0.60),
+        98: (0.47, 0.60),
+        327: (0.53, 0.60),
+        2: (0.50, 0.66),
+    }
+    for i, (x, y) in explicit.items():
+        pts[i] = (x, y)
+    # Прочие зеркальные пары — на равных расстояниях от оси.
+    for left, right, d, y in [
+        (159, 386, 0.10, 0.46),
+        (145, 374, 0.12, 0.44),
+        (46, 276, 0.08, 0.55),
+        (53, 283, 0.10, 0.52),
+        (70, 300, 0.14, 0.40),
+        (63, 293, 0.09, 0.42),
+        (132, 361, 0.11, 0.47),
+        (58, 288, 0.13, 0.53),
+        (136, 365, 0.12, 0.45),
+        (150, 379, 0.10, 0.48),
+    ]:
+        pts[left] = (0.5 - d, y)
+        pts[right] = (0.5 + d, y)
+    return pts
+
+
+def test_mediapipe_symmetry_axis_uses_own_contour() -> None:
+    """Ось симметрии берёт контур схемы, а не срез 0..32 (регрессия).
+
+    Раньше для MediaPipe срез rp[0:33] — это не контур, а произвольные точки,
+    и ось уезжала на десятки пикселей: у симметричного лица выходила
+    асимметрия ~0.23 и балл 0.0.
+    """
+    from app.ml.landmarks import FaceLandmarks
+    from app.ml.metrics import compute_raw_metrics
+
+    lm = FaceLandmarks(
+        points=_synthetic_mediapipe_points(), provider="mediapipe", image_size=(1000, 1000)
+    )
+    raw = compute_raw_metrics(lm)
+    assert raw.values["facial_symmetry"] < 0.02
+
+
+def test_mediapipe_lip_height_is_not_zero() -> None:
+    """Высота губ считается по внешним точкам, а не по совпадающим 13/14."""
+    from app.ml.landmarks import FaceLandmarks
+    from app.ml.metrics import compute_raw_metrics
+
+    lm = FaceLandmarks(
+        points=_synthetic_mediapipe_points(), provider="mediapipe", image_size=(1000, 1000)
+    )
+    raw = compute_raw_metrics(lm)
+    assert raw.values["mouth_proportion"] < 30.0
+    assert raw.values["mouth_proportion"] > 0.5

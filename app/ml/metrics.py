@@ -176,7 +176,10 @@ MP_CHIN = 152
 MP_FOREHEAD_TOP = 10
 MP_JAW_LEFT, MP_JAW_RIGHT = 172, 397
 MP_ZYGO_LEFT, MP_ZYGO_RIGHT = 234, 454
-MP_UPPER_LIP, MP_LOWER_LIP = 13, 14
+# Верхняя и нижняя точки контура губ FaceMesh. Индексы 13/14 — внутренние точки
+# сомкнутой линии губ; у сомкнутого рта они практически совпадают по y, поэтому
+# высота губ получалась нулевой и «пропорция губ» уходила в сотни.
+MP_UPPER_LIP, MP_LOWER_LIP = 0, 17
 
 
 @dataclass(slots=True)
@@ -188,6 +191,11 @@ class _PointMap:
     face_width: float
     face_height: float
     scheme: str
+    # Контур лица именно этой схемы. Поле нужно для оси симметрии: индексы
+    # 0..32 задают контур только у InsightFace/legacy, у MediaPipe это совсем
+    # другие точки, поэтому брать срез массива по «общим» индексам нельзя.
+    # Может быть срезом (непрерывный диапазон) или массивом индексов.
+    contour_span: slice | np.ndarray = slice(0, 33)
 
 
 def _extract_insightface(pts: np.ndarray) -> _PointMap:
@@ -299,7 +307,8 @@ def _extract_mediapipe(pts: np.ndarray) -> _PointMap:
         67,
         109,
     ]
-    contour = pts[[i for i in contour_idx if i < len(pts)]]
+    span = np.asarray(contour_idx)
+    contour = pts[span]
     top_y = float(contour[:, 1].min())
     chin_y = float(pts[MP_CHIN][1])
     face_h = max(chin_y - top_y, 1e-9)
@@ -327,7 +336,12 @@ def _extract_mediapipe(pts: np.ndarray) -> _PointMap:
         "gonion_right": pts[MP_JAW_RIGHT],
     }
     return _PointMap(
-        points=points, contour=contour, face_width=face_w, face_height=face_h, scheme="mediapipe"
+        points=points,
+        contour=contour,
+        face_width=face_w,
+        face_height=face_h,
+        scheme="mediapipe",
+        contour_span=span,
     )
 
 
@@ -645,14 +659,11 @@ def compute_raw_metrics(lm: FaceLandmarks, gender: str | None = None) -> RawMetr
     # Ось — вертикаль через середину между внутренними углами глаз и центром
     # контура. Кончик носа в оси НЕ участвует: он бывает смещён и тогда
     # «создавал» асимметрию на симметричном лице.
+    contour_x = rp[pmap.contour_span, 0]
     midline_x = float(
         (
             (r["left_eye_inner"][0] + r["right_eye_inner"][0]) / 2.0
-            + (
-                rp[IF_CONTOUR[0] : IF_CONTOUR[1], 0].min()
-                + rp[IF_CONTOUR[0] : IF_CONTOUR[1], 0].max()
-            )
-            / 2.0
+            + (float(contour_x.min()) + float(contour_x.max())) / 2.0
         )
         / 2.0
     )
