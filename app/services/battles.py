@@ -150,6 +150,9 @@ async def find_opponent(db: AsyncSession, photo: Photo, owner_elo: int) -> Photo
                 Photo.quality_score >= MIN_QUALITY_FOR_BATTLE,
                 User.is_active.is_(True),
                 User.is_banned.is_(False),
+                # Opt-out владельца: галочка «Показывать в мобатлах» должна
+                # реально исключать фото из подбора, а не только храниться.
+                User.show_in_battles.is_(True),
                 User.elo.between(owner_elo - window, owner_elo + window),
             )
             .order_by(func.random())
@@ -169,6 +172,8 @@ async def create_or_get_battle(
     db: AsyncSession, photo: Photo, user: User
 ) -> tuple[Battle, Photo, Photo]:
     """Возвращает активный батл с участием фото или создаёт новый."""
+    if not user.show_in_battles:
+        raise BattleError("Участие в батлах отключено в профиле")
     if not is_battle_eligible(photo):
         raise BattleError("Фото не допущено к батлам: нужно публичное фото хорошего качества")
 

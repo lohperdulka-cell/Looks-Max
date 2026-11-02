@@ -60,6 +60,9 @@ async def two_users_with_photos(client: AsyncClient, db_session):
     await client.post("/api/auth/logout")
 
     users = (await db_session.execute(select(User).order_by(User.id))).scalars().all()
+    for u in users:
+        u.show_in_battles = True
+    await db_session.commit()
     photo_one = await _make_photo(db_session, users[0].id)
     photo_two = await _make_photo(db_session, users[1].id)
     return users, photo_one, photo_two
@@ -97,6 +100,8 @@ async def test_battle_eligibility_rules(db_session, two_users_with_photos) -> No
 async def test_next_battle_requires_public_photo(client: AsyncClient, db_session) -> None:
     await _register(client, "solo_user")
     user = (await db_session.execute(select(User))).scalar_one()
+    user.show_in_battles = True
+    await db_session.commit()
     await _make_photo(db_session, user.id, public=False)
     resp = await client.get("/api/battles/next")
     assert resp.status_code == 409
@@ -251,3 +256,33 @@ async def test_private_photo_image_still_hidden(
     await _register(client, "voter_priv")
     resp = await client.get(f"/api/photos/{photo_two.id}/image")
     assert resp.status_code == 404
+
+
+async def test_opted_out_user_not_shown_as_opponent(
+    client: AsyncClient, db_session, two_users_with_photos
+) -> None:
+    """Галочка «Показывать в мобатлах» реально исключает фото из подбора.
+
+    Раньше поле хранилось и рисовалось в профиле, но нигде не проверялось:
+    пользователь снимал галочку, а его фото всё равно показывали другим.
+    """
+    users, _photo_one, _photo_two = two_users_with_photos
+    users[1].show_in_battles = False  # владелец фото-соперника уходит в opt-out
+    await db_session.commit()
+
+    await client.post("/api/auth/login", json={"username": "fighter_one", "password": "Passw0rd1"})
+    resp = await client.get("/api/battles/next")
+    assert resp.status_code == 409  # соперников больше нет
+
+
+async def test_opted_out_user_cannot_start_battle(
+    client: AsyncClient, db_session, two_users_with_photos
+) -> None:
+    """С opt-out нельзя и выставить своё фото в батл."""
+    users, _photo_one, _photo_two = two_users_with_photos
+    users[0].show_in_battles = False
+    await db_session.commit()
+
+    await client.post("/api/auth/login", json={"username": "fighter_one", "password": "Passw0rd1"})
+    resp = await client.get("/api/battles/next")
+    assert resp.status_code == 409
