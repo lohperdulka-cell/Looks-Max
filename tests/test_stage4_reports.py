@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import numpy as np
 import pytest
 from app.models.photo import Photo
@@ -258,3 +260,53 @@ def test_recommendations_are_deterministic() -> None:
     first = build_recommendations(result)
     second = build_recommendations(result)
     assert [r.key for r in first] == [r.key for r in second]
+
+
+def test_pdf_export_blocks_remote_resources() -> None:
+    """Экспорт PDF не должен ходить в сеть по URL из HTML.
+
+    Поле display_name контролирует пользователь. Если оно попадёт в HTML
+    как <img src="http://...">, WeasyPrint без url_fetcher сам сходит по
+    адресу — SSRF. Проверяем на реальном локальном сервере: он не должен
+    получить ни одного запроса, а PDF всё равно собирается.
+    """
+    import http.server
+    import socketserver
+    import threading
+
+    pytest.importorskip("weasyprint")
+    from app.schemas.reports import ReportOut
+    from app.services.pdf import render_pdf
+
+    hits: list[str] = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            hits.append(self.path)
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.end_headers()
+            self.wfile.write(b"\x89PNG\r\n\x1a\n")
+
+        def log_message(self, *args: object) -> None:
+            pass
+
+    server = socketserver.TCPServer(("127.0.0.1", 0), Handler)
+    port = server.server_address[1]
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        report = ReportOut.model_construct(
+            id=1,
+            photo_id=1,
+            overall_score=75.0,
+            model_version="test",
+            is_public=False,
+            created_at=datetime.now(UTC),
+            disclaimer="d",
+        )
+        payload = f'<img src="http://127.0.0.1:{port}/steal">'
+        pdf = render_pdf(report, username=payload)
+        assert pdf.startswith(b"%PDF")
+        assert hits == [], f"PDF-экспорт сходил по внешнему URL: {hits}"
+    finally:
+        server.shutdown()

@@ -255,6 +255,18 @@ def render_report_html(report: ReportOut, username: str = "") -> str:
 </html>"""
 
 
+def _block_remote_assets(url: str, *args: object, **kwargs: object):
+    """Отдаёт 404 на любой внешний ресурс — WeasyPrint его пропускает.
+
+    Вернуть None нельзя: WeasyPrint 70 падает с AssertionError, если
+    url_fetcher не вернул dict/URLFetcherResponse. Пустой ответ 404 безопаснее:
+    ресурс просто не рисуется, а сеть/файл не трогаются.
+    """
+    from weasyprint.urls import URLFetcherResponse
+
+    return URLFetcherResponse(url=url, status=404, headers={}, string=b"")
+
+
 def render_pdf(report: ReportOut, username: str = "") -> bytes:
     """Рендерит отчёт в PDF. Бросает RuntimeError, если WeasyPrint недоступен.
 
@@ -270,4 +282,4 @@ def render_pdf(report: ReportOut, username: str = "") -> bytes:
         raise RuntimeError("Экспорт в PDF недоступен: не установлен WeasyPrint") from exc
 
     html = render_report_html(report, username=username)
-    return HTML(string=html, url_fetcher=lambda *args, **kwargs: None).write_pdf()
+    return HTML(string=html, url_fetcher=_block_remote_assets).write_pdf()
