@@ -11,7 +11,7 @@ import traceback
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, status
+from fastapi import Depends, FastAPI, Request, status
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -184,16 +184,21 @@ def create_app() -> FastAPI:
     from app.api.profile import router as profile_router
     from app.api.reports import public_router as public_reports_router
     from app.api.reports import router as reports_router
+    from app.core.deps import csrf_origin_guard
 
-    application.include_router(auth_router)
-    application.include_router(photos_router)
-    application.include_router(reports_router)
-    application.include_router(profile_router)
-    application.include_router(battles_router)
-    application.include_router(exercises_router)
-    application.include_router(chat_router)
-    application.include_router(admin_router)
-    application.include_router(content_router)
+    # Мультирующие роутеры идут с глобальной проверкой Origin/Referer: cookie
+    # уходит автоматически, поэтому чужой сайт не должен мочь дёрнуть API от
+    # имени пользователя. Публичный роутер (только GET) — без проверки.
+    guard = [Depends(csrf_origin_guard)]
+    application.include_router(auth_router, dependencies=guard)
+    application.include_router(photos_router, dependencies=guard)
+    application.include_router(reports_router, dependencies=guard)
+    application.include_router(profile_router, dependencies=guard)
+    application.include_router(battles_router, dependencies=guard)
+    application.include_router(exercises_router, dependencies=guard)
+    application.include_router(chat_router, dependencies=guard)
+    application.include_router(admin_router, dependencies=guard)
+    application.include_router(content_router, dependencies=guard)
     application.include_router(public_reports_router)
     application.include_router(pages_router)
 

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from typing import Annotated
+from urllib.parse import urlparse
 
 import jwt
 from fastapi import Cookie, Depends, Header, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.security import decode_token, verify_csrf_token
 from app.db import get_session
 from app.models.user import User
@@ -85,6 +87,66 @@ async def verify_csrf(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Отсутствует CSRF-токен")
     if not verify_csrf_token(cookie_token, header_token):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Неверный CSRF-токен")
+
+
+# Методы, меняющие состояние: только для них проверяется Origin/Referer.
+_UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def _allowed_origins() -> set[str]:
+    """Origin, с которых разрешены мутирующие запросы с cookie (кроме своего)."""
+    origins = {settings.base_url.rstrip("/")}
+    origins.update(o.rstrip("/") for o in settings.extra_allowed_origins)
+    return origins
+
+
+def _request_origin(request: Request) -> str:
+    """Собственный origin запроса по заголовку Host (схему за прокси не берём)."""
+    return request.headers.get("host", "").rstrip("/")
+
+
+def _origin_matches(origin: str, request: Request) -> bool:
+    """True, если origin совпадает со своим хостом или с разрешённым списком.
+
+    Свой origin вычисляется из Host запроса, а не только из BASE_URL: так
+    same-origin работает при любом домене/порту, даже если BASE_URL в окружении
+    не выставлен под текущий деплой. Браузер подставляет Host целевого сервера
+    сам, поэтому подменить его из чужого сайта нельзя.
+    """
+    candidate = origin.rstrip("/")
+    if not candidate:
+        return False
+    parsed = urlparse(candidate)
+    # Сравниваем по host:port — схема за обратным прокси может отличаться.
+    if parsed.netloc and parsed.netloc == _request_origin(request):
+        return True
+    return candidate in _allowed_origins()
+
+
+async def csrf_origin_guard(request: Request) -> None:
+    """Блокирует межсайтовые мутирующие запросы по заголовку Origin.
+
+    httpOnly-cookie уходит в запрос автоматически, поэтому чужой сайт может
+    дёрнуть наш API «руками» пользователя. CSRF-заголовок без этой проверки —
+    защита только на бумаге: fetch() его не добавит, но и не мешает браузеру
+    отправить саму cookie.
+
+    Проверяем только Origin, а не Referer:
+      * браузеры ВСЕГДА шлют Origin на cross-origin POST/PUT/PATCH/DELETE, а из
+        JS подделать его нельзя — этого достаточно против CSRF;
+      * Referer для нашего аналитического маячка штатно указывает на чужой сайт
+        (переход по внешней ссылке) и является полезными данными, а не признаком
+        атаки; блокировка по Referer сломала бы учёт переходов.
+
+    Если Origin отсутствует, запрос пришёл не из браузера (curl, скрипты,
+    серверные клиенты) — там CSRF неприменим, пропускаем. Безопасные методы
+    (GET/HEAD/OPTIONS) не проверяются: они не меняют состояние.
+    """
+    if request.method not in _UNSAFE_METHODS:
+        return
+    origin = request.headers.get("origin")
+    if origin is not None and not _origin_matches(origin, request):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Запрос с чужого origin")
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]

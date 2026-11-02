@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     cookie_secure: bool = False  # в prod за HTTPS выставить True
     cookie_domain: str | None = None
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+    # Дополнительные origin, которым разрешены мутирующие запросы с cookie.
+    # Нужны, если фронт отдаётся с другого хоста (например, CDN + api-домен).
+    extra_allowed_origins: tuple[str, ...] = ()
 
     # --- Rate limiting ---
     rate_limit_enabled: bool = True

@@ -259,3 +259,49 @@ async def test_authenticated_user_redirected_from_login(client: AsyncClient) -> 
 async def test_csrf_token_header_present(client: AsyncClient) -> None:
     resp = await client.post("/api/auth/register", json=REGISTER)
     assert "x-csrf-token" in resp.headers
+
+
+# --- CSRF: защита от межсайтовых мутирующих запросов -------------------------
+
+
+async def test_foreign_origin_blocks_mutation(client: AsyncClient) -> None:
+    """POST с чужого origin отклоняется, даже если cookie валидна."""
+    await client.post("/api/auth/register", json=REGISTER)
+    resp = await client.post("/api/photos/1/preview", headers={"Origin": "https://evil.example"})
+    assert resp.status_code == 403
+    assert "origin" in resp.json()["detail"].lower()
+
+
+async def test_foreign_referer_does_not_block(client: AsyncClient) -> None:
+    """Чужой Referer без Origin не блокируется: Referer — данные, не признак CSRF.
+
+    Аналитический маячок штатно получает referer внешнего сайта; блокировка по
+    нему сломала бы учёт переходов.
+    """
+    await client.post("/api/auth/register", json=REGISTER)
+    resp = await client.post("/api/auth/logout", headers={"Referer": "https://evil.example/x"})
+    assert resp.status_code == 200
+
+
+async def test_same_origin_mutation_allowed(client: AsyncClient) -> None:
+    """Свой origin (base_url) пропускается."""
+    await client.post("/api/auth/register", json=REGISTER)
+    resp = await client.post("/api/auth/logout", headers={"Origin": "http://test"})
+    assert resp.status_code == 200
+
+
+async def test_no_origin_client_allowed(client: AsyncClient) -> None:
+    """Запрос без Origin/Referer (скрипты, API-клиенты) не блокируется.
+
+    CSRF — атака через браузер; у серверного клиента cookies нет, и
+    требовать заголовок значило бы сломать все не-браузерные интеграции.
+    """
+    await client.post("/api/auth/register", json=REGISTER)
+    resp = await client.post("/api/auth/logout")
+    assert resp.status_code == 200
+
+
+async def test_safe_method_ignores_foreign_origin(client: AsyncClient) -> None:
+    """GET с чужого origin не блокируется: состояние не меняется."""
+    resp = await client.get("/health", headers={"Origin": "https://evil.example"})
+    assert resp.status_code == 200
