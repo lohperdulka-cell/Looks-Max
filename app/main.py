@@ -59,7 +59,7 @@ def create_app() -> FastAPI:
 
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=[settings.base_url],
+        allow_origins=list(settings.allowed_origins),
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
         allow_headers=["*"],
@@ -186,7 +186,7 @@ def create_app() -> FastAPI:
     from app.api.reports import router as reports_router
     from app.core.deps import csrf_origin_guard
 
-    # Мультирующие роутеры идут с глобальной проверкой Origin/Referer: cookie
+    # Мутирующие роутеры идут с глобальной проверкой Origin: cookie
     # уходит автоматически, поэтому чужой сайт не должен мочь дёрнуть API от
     # имени пользователя. Публичный роутер (только GET) — без проверки.
     guard = [Depends(csrf_origin_guard)]

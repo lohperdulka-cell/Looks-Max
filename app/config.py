@@ -141,6 +141,18 @@ class Settings(BaseSettings):
     def is_production(self) -> bool:
         return self.app_env == "production"
 
+    @property
+    def allowed_origins(self) -> tuple[str, ...]:
+        """Origin'ы, которым разрешены запросы с cookie: свой + дополнительные.
+
+        Единый список для CORS и для CSRF-проверки, чтобы они не разошлись:
+        если origin разрешён в CORS, но не в CSRF-гварде (или наоборот), фронт
+        либо получит 403, либо дыру в защите.
+        """
+        own = (self.base_url.rstrip("/"),)
+        extra = tuple(o.rstrip("/") for o in self.extra_allowed_origins if o.strip())
+        return tuple(dict.fromkeys(own + extra))
+
     @model_validator(mode="after")
     def _guard_production_secrets(self) -> Settings:
         """Не даёт поднять прод на дефолтных секретах.

@@ -31,6 +31,19 @@ def test_settings_sqlite_flag() -> None:
     assert s.is_sqlite
 
 
+def test_allowed_origins_includes_base_url_and_extras() -> None:
+    """CORS и CSRF-гвард берут один список origin из настроек.
+
+    Если бы списки разошлись, разрешённый в CORS origin получал бы 403 от
+    CSRF-гварда (или наоборот — появлялась бы дыра в защите).
+    """
+    s = Settings(
+        base_url="https://app.example/",
+        extra_allowed_origins=("https://cdn.example/", "https://cdn.example"),
+    )
+    assert s.allowed_origins == ("https://app.example", "https://cdn.example")
+
+
 # --- Безопасность продакшена --------------------------------------------------
 
 

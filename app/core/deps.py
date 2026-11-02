@@ -89,15 +89,13 @@ async def verify_csrf(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Неверный CSRF-токен")
 
 
-# Методы, меняющие состояние: только для них проверяется Origin/Referer.
+# Методы, меняющие состояние: только для них проверяется Origin.
 _UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
 def _allowed_origins() -> set[str]:
     """Origin, с которых разрешены мутирующие запросы с cookie (кроме своего)."""
-    origins = {settings.base_url.rstrip("/")}
-    origins.update(o.rstrip("/") for o in settings.extra_allowed_origins)
-    return origins
+    return set(settings.allowed_origins)
 
 
 def _request_origin(request: Request) -> str:
